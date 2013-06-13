@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 
@@ -20,6 +21,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -30,6 +33,8 @@ import org.maxgamer.QuickShop.Shop.ShopChunk;
 import org.maxgamer.QuickShop.Shop.ShopManager;
 import org.maxgamer.QuickShop.Shop.ShopType;
 
+import com.earth2me.essentials.Essentials;
+import com.earth2me.essentials.IEssentials;
 import com.worldcretornica.plotme.Plot;
 import com.worldcretornica.plotme.PlotManager;
 import com.worldcretornica.plotme.PlotMe;
@@ -52,6 +57,8 @@ public class MarketSearch extends JavaPlugin {
 	private Boolean QSHooked = false;
 	private Boolean PlotMeHooked = false;
 
+	public IEssentials EssPlugin;
+	
 	static class ShopResult {
 		String PlotOwner;
 		String ShopOwner;
@@ -60,10 +67,54 @@ public class MarketSearch extends JavaPlugin {
 		String Type;
 		Integer Stock;
 		Double Price;
+		Boolean Enchanted = false;
 	}
 	
-	public static class ShopResultSort {
+	@Override
+	public void onEnable(){
+		// Register necessary events
+		pdfFile = this.getDescription();
+		pm = this.getServer().getPluginManager();
+		QSSM = QuickShop.instance.getShopManager();
 		
+		MarketWorld = "market";
+		
+		getCommand("marketsearch").setExecutor(new CommandListener(this));
+		getCommand("marketsearch").setAliases(Arrays.asList("ms"));
+		
+		final Plugin ess = this.pm.getPlugin("Essentials");
+		if (ess != null) {
+			EssPlugin = (IEssentials) ess;
+			Log("Found Essentials - It will be used for item lookup");
+		} else {
+			EssPlugin = null;
+			Log("Essentials not found! Using native Bukkit item lookup");
+		}
+		
+		Log(pdfFile.getName() + " " + pdfFile.getVersion() + " has been enabled");
+	}
+		
+	@Override
+	public void onDisable() {
+		// Nothing yet
+	}
+
+	/*
+	 * Detect/configure Vault
+	 */
+	private boolean setupEconomy() {
+        if (getServer().getPluginManager().getPlugin("Vault") == null) {
+            return false;
+        }
+        RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
+        if (rsp == null) {
+            return false;
+        }
+        econ = rsp.getProvider();
+        return econ != null;
+    }
+
+	public static class ShopResultSort {
 		public static Comparator<ShopResult> ByPrice = new Comparator<ShopResult>() {
 			@Override
 			public int compare(ShopResult shop1, ShopResult shop2) {
@@ -122,52 +173,22 @@ public class MarketSearch extends JavaPlugin {
 		}
 	}
 	
-	@Override
-	public void onEnable(){
-		// Register necessary events
-		pdfFile = this.getDescription();
-		pm = this.getServer().getPluginManager();
-		QSSM = QuickShop.instance.getShopManager();
-		
-		MarketWorld = "market";
-		
-		getCommand("marketsearch").setExecutor(new CommandListener(this));
-		getCommand("marketsearch").setAliases(Arrays.asList("ms"));
-		//getCommand("ms").setExecutor(new CommandListener(this));
-		
-		Log(pdfFile.getName() + " " + pdfFile.getVersion() + " has been enabled");
-	}
-		
-	@Override
-	public void onDisable() {
-		// Nothing yet
-	}
-
-	/*
-	 * Detect/configure Vault
-	 */
-	private boolean setupEconomy() {
-        if (getServer().getPluginManager().getPlugin("Vault") == null) {
-            return false;
-        }
-        RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
-        if (rsp == null) {
-            return false;
-        }
-        econ = rsp.getProvider();
-        return econ != null;
-    }
-
-	public List<ShopResult> SearchMarket(Material SearchItem, ShopType SearchType) {
+	public List<ShopResult> SearchMarket(ItemStack SearchItem, ShopType SearchType) {
 		List<ShopResult> results = new ArrayList<ShopResult>(); 
 		for(Entry<ShopChunk, HashMap<Location, Shop>> chunks : QSSM.getShops(MarketWorld).entrySet()) {
 			
 		    for(Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
 		    	Shop shop = inChunk.getValue();
-		    	
+
+		    	if (shop.getItem().getTypeId() != SearchItem.getTypeId()) { continue; }	// Wrong item
+
+		    	// Only compare data/durability for items with no real durability (blocks, etc)
+		    	if (SearchItem.getType().getMaxDurability() == 0) {
+		    		if (shop.getItem().getDurability() != SearchItem.getDurability()) { continue; }
+		    	}
+
 		    	if (shop.getRemainingStock() == 0) { continue; }			// No stock
-		    	if (shop.getItem().getType() != SearchItem) { continue; }	// Wrong item
-		    	if (shop.getShopType() != SearchType) { continue; }			// Wrong shop type 
+		    	if (shop.getShopType() != SearchType) { continue; }			// Wrong shop type
 		    	
 		    	ShopResult result = new ShopResult();
 			    result.ShopOwner = shop.getOwner();
@@ -175,6 +196,11 @@ public class MarketSearch extends JavaPlugin {
 			    result.ItemID = shop.getItem().getTypeId();
 			    result.Stock = shop.getRemainingStock();
 			    result.Price = shop.getPrice();
+
+			    // Is this item enchanted?
+			    if (shop.getItem().getEnchantments().size() > 0) {
+			    	result.Enchanted = true;
+			    }
 
 			    Plot p = PlotManager.getPlotById(shop.getLocation());
 			    if (p != null) {

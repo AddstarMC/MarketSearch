@@ -10,6 +10,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.maxgamer.QuickShop.Shop.ShopType;
 
 import au.com.addstar.marketsearch.MarketSearch.ShopResult;
@@ -42,49 +43,72 @@ public class CommandListener implements CommandExecutor {
 			// Build search string from args (but drop first arg)
 			String search = "";
 			for (int x = 1; x < args.length; x++) {
-				if (x > 1) {
-					search += "_";
-				}
-				search += args[x].toUpperCase();
+				search += args[x];
 			}
 
 			// Fix for redstone torches
-			if (search.contains("REDSTONE_TORCH") || search.contains("REDSTONETORCH")) { search = "REDSTONE_TORCH_ON"; }
+			//if (search.contains("REDSTONE_TORCH") || search.contains("REDSTONETORCH")) { search = "REDSTONE_TORCH_ON"; }
 			
 			// Validate the material and perform the search
-			Material mat = plugin.GetMaterial(search);
-			if (mat != null) {
-				String matname = mat.name();
-				if (matname.contains("REDSTONE_TORCH_ON")) { matname = "REDSTONE_TORCH"; }
-
-				sender.sendMessage(ChatColor.GREEN + "Searching for: " + ChatColor.WHITE + matname);
-				List<ShopResult> results = plugin.SearchMarket(mat, ShopType.SELLING);
+			ItemStack searchfor;
+			try {
+				searchfor = plugin.EssPlugin.getItemDb().get(search, 1);
+			} catch (Exception e) {
+				sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
+				return true;
+			}
+			
+			if (searchfor != null) {
+				sender.sendMessage(ChatColor.GREEN + "Searching for: " + 
+						ChatColor.YELLOW + "(" + searchfor.getTypeId() + ":" + searchfor.getData().getData() + ") " + 
+						ChatColor.WHITE + plugin.EssPlugin.getItemDb().names(searchfor));
+				List<ShopResult> results = plugin.SearchMarket(searchfor, ShopType.SELLING);
 
 				if (results.size() > 0) {
 					int cnt = 0;
+					String ownerstr;
+					String ench;
+					Boolean enchfound = false;
 					for (ShopResult result : results) {
 						// Cap results at 10
 						if (cnt > 11) { break; }
+						if (result.PlotOwner.equals(result.ShopOwner)) {
+							ownerstr = ChatColor.AQUA + result.PlotOwner;
+						} else {
+							ownerstr = ChatColor.AQUA + result.PlotOwner + ChatColor.BLUE + " (" + result.ShopOwner + ")";
+						}
+						
+						if (result.Enchanted) {
+							ench = " " + ChatColor.LIGHT_PURPLE + "(*)" + " ";
+							enchfound = true;
+						} else {
+							ench = "";
+						}
+						
 						sender.sendMessage(
-								ChatColor.GREEN + " - " + 
-					    		ChatColor.AQUA + result.PlotOwner + ChatColor.BLUE + " (" + result.ShopOwner + ")" + 
+								ChatColor.GREEN + " - " + ownerstr + 
 					    		ChatColor.GREEN + ": Price " + 
-					    		ChatColor.YELLOW + "$" + result.Price + 
+					    		ChatColor.YELLOW + "$" + result.Price + ench + 
 					    		ChatColor.GREEN + "  (" + result.Stock + " left)");
 						cnt++;
+					}
+					
+					// If enchanted items are in the results, tell them
+					if (enchfound) {
+						sender.sendMessage(ChatColor.LIGHT_PURPLE + "(*) Indicates an enchanted item");
 					}
 				} else {
 					sender.sendMessage(ChatColor.RED + "Sorry, no stock available in any shop");
 				}
 			} else {
-				sender.sendMessage(ChatColor.RED + "Invalid item!");
+				sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
 			}
 			break;
 			
 		case "STOCK":
 		case "PSTOCK":
 			if ((sender instanceof Player)) {
-				if (!plugin.RequirePermission((Player) sender, "marketsearch.stockcheck")) { return false; }
+				if (!plugin.RequirePermission((Player) sender, "marketsearch.stock")) { return false; }
 			}
 
 			List<ShopResult> results;
