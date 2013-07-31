@@ -70,13 +70,15 @@
     </dependency>
 
     <dependency>
-      <groupId>org.maxgamer.QuickShop</groupId>
-      <artifactId>quickshop</artifactId>
+      <groupId>org.maxgamer</groupId>
+      <artifactId>QuickShop</artifactId>
+      <version>4.4</version>
     </dependency>
 
     <dependency>
-      <groupId>com.earth2me.essentials</groupId>
-      <artifactId>essentials</artifactId>
+      <groupId>com.earth2me</groupId>
+      <artifactId>Essentials</artifactId>
+      <version>2.11.1</version>
     </dependency>
   </dependencies>
 
