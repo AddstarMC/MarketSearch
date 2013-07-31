@@ -84,6 +84,14 @@
       <scope>system</scope>
       <systemPath>${project.basedir}/lib/Essentials-2.11.1.jar</systemPath>
     </dependency>
+
+    <dependency>
+      <groupId>com.worldcretornica</groupId>
+      <artifactId>PlotMe</artifactId>
+      <version>0.13b</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/PlotMe-0.13b.jar</systemPath>
+    </dependency>
   </dependencies>
 
   <build>
