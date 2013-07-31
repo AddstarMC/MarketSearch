@@ -1,6 +1,6 @@
 name: MarketSearch
 main: au.com.addstar.marketsearch.MarketSearch
-version: 1.2.0
+version: ${project.version}
 author: add5tar
 softdepend: [Essentials, Vault, Multiverse-Core, My Worlds, QuickShop, PlotMe]
 website: http://dev.bukkit.org/server-mods/marketsearch/
