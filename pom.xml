@@ -68,6 +68,16 @@
       <artifactId>vault</artifactId>
       <version>1.2.12</version>
     </dependency>
+
+    <dependency>
+      <groupId>org.maxgamer.QuickShop</groupId>
+      <artifactId>quickshop</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.earth2me.essentials</groupId>
+      <artifactId>essentials</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
