@@ -80,9 +80,9 @@
     <dependency>
       <groupId>com.earth2me</groupId>
       <artifactId>Essentials</artifactId>
-      <version>2.11.1</version>
+      <version>Pre2.12.1.2</version>
       <scope>system</scope>
-      <systemPath>${project.basedir}/lib/Essentials-2.11.1.jar</systemPath>
+      <systemPath>${project.basedir}/lib/Essentials-Pre2.12.1.2.jar</systemPath>
     </dependency>
 
     <dependency>
