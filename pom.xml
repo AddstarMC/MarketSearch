@@ -33,6 +33,12 @@
       <url>http://repo1.maven.org/maven2/</url>
     </repository>
     
+    <!-- Addstar repo -->
+    <repository>
+      <id>addstar-repo</id>
+      <url>http://maven.addstar.com.au/artifactory/ext-release-local</url>
+    </repository>
+    
     <!-- mcstats repo -->
     <repository>
       <id>Plugin Metrics</id>
@@ -45,7 +51,7 @@
     <dependency>
       <groupId>org.bukkit</groupId>
       <artifactId>bukkit</artifactId>
-      <version>1.6.2-R0.1-SNAPSHOT</version>
+      <version>1.6.2-R0.2-SNAPSHOT</version>
     </dependency>
     
     <!-- CraftBukkit Dependency for experimental features
@@ -71,26 +77,20 @@
 
     <dependency>
       <groupId>org.maxgamer</groupId>
-      <artifactId>QuickShop</artifactId>
+      <artifactId>quickshop</artifactId>
       <version>4.4</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/lib/QuickShop-4.4.jar</systemPath>
     </dependency>
 
     <dependency>
       <groupId>com.earth2me</groupId>
-      <artifactId>Essentials</artifactId>
-      <version>Pre2.12.1.2</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/lib/Essentials-Pre2.12.1.2.jar</systemPath>
+      <artifactId>essentials</artifactId>
+      <version>pre2.12.1.2</version>
     </dependency>
 
     <dependency>
       <groupId>com.worldcretornica</groupId>
-      <artifactId>PlotMe</artifactId>
+      <artifactId>plotme</artifactId>
       <version>0.13b</version>
-      <scope>system</scope>
-      <systemPath>${project.basedir}/lib/PlotMe-0.13b.jar</systemPath>
     </dependency>
   </dependencies>
 
