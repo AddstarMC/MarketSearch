@@ -205,11 +205,10 @@ public class MarketSearch extends JavaPlugin {
 			    Plot p = PlotManager.getPlotById(shop.getLocation());
 			    if (p != null) {
 			    	result.PlotOwner = p.owner;
+			    	results.add(result);
 			    } else {
 			    	Warn("Unable to find plot! " + shop.getLocation().toString());
 			    }
-			    
-			    results.add(result);
 		    }
 		}
 
@@ -235,11 +234,10 @@ public class MarketSearch extends JavaPlugin {
 				    Plot p = PlotManager.getPlotById(shop.getLocation());
 				    if (p != null) {
 				    	result.PlotOwner = p.owner;
+				    	results.add(result);
 				    } else {
 				    	Warn("Unable to find plot! " + shop.getLocation().toString());
 				    }
-				    
-				    results.add(result);
 		    	}
 		    }
 		}
