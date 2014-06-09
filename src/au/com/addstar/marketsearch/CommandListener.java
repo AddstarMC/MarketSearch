@@ -214,6 +214,11 @@ public class CommandListener implements CommandExecutor {
 			}
 			break;
 			
+		case "REPORT":
+			if ((sender instanceof Player)) {
+				if (!plugin.RequirePermission((Player) sender, "marketsearch.report")) { return false; }
+			}
+			
 		default:
 			plugin.SendHelp(sender);
 			break;

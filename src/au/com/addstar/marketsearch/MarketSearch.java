@@ -223,7 +223,7 @@ public class MarketSearch extends JavaPlugin {
 			
 		    for(Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
 		    	Shop shop = inChunk.getValue();
-		    	if (shop.getOwner().equals(player)) {
+		    	if (shop.getOwner().equalsIgnoreCase(player)) {
 			    	ShopResult result = new ShopResult();
 				    result.ShopOwner = shop.getOwner();
 				    result.ItemName = shop.getItem().getType().name();
