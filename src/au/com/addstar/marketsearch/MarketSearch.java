@@ -2,13 +2,10 @@ package au.com.addstar.marketsearch;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 
@@ -25,7 +22,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
-import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.maxgamer.QuickShop.QuickShop;
 import org.maxgamer.QuickShop.Shop.Shop;
@@ -33,11 +29,9 @@ import org.maxgamer.QuickShop.Shop.ShopChunk;
 import org.maxgamer.QuickShop.Shop.ShopManager;
 import org.maxgamer.QuickShop.Shop.ShopType;
 
-import com.earth2me.essentials.Essentials;
 import com.earth2me.essentials.IEssentials;
 import com.worldcretornica.plotme.Plot;
 import com.worldcretornica.plotme.PlotManager;
-import com.worldcretornica.plotme.PlotMe;
 
 public class MarketSearch extends JavaPlugin {
 	public static MarketSearch instance;
@@ -53,9 +47,6 @@ public class MarketSearch extends JavaPlugin {
 	private static final Logger logger = Logger.getLogger("Minecraft");
 	public PluginDescriptionFile pdfFile = null;
 	public PluginManager pm = null;
-
-	private Boolean QSHooked = false;
-	private Boolean PlotMeHooked = false;
 
 	public IEssentials EssPlugin;
 	
@@ -98,21 +89,6 @@ public class MarketSearch extends JavaPlugin {
 	public void onDisable() {
 		// Nothing yet
 	}
-
-	/*
-	 * Detect/configure Vault
-	 */
-	private boolean setupEconomy() {
-        if (getServer().getPluginManager().getPlugin("Vault") == null) {
-            return false;
-        }
-        RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
-        if (rsp == null) {
-            return false;
-        }
-        econ = rsp.getProvider();
-        return econ != null;
-    }
 
 	public static class ShopResultSort {
 		public static Comparator<ShopResult> ByPrice = new Comparator<ShopResult>() {
