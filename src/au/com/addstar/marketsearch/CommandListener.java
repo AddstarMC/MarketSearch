@@ -90,12 +90,19 @@ public class CommandListener implements CommandExecutor {
 						} else {
 							ench = "";
 						}
+
+						String stockdisplay;
+						if (action == "SELL") {
+							stockdisplay = "(" + result.Space + " slots)";
+						} else {
+							stockdisplay = "(" + result.Stock + " left)";
+						}
 						
 						sender.sendMessage(
 								ChatColor.GREEN + " - " + ownerstr + 
 					    		ChatColor.GREEN + ": " + 
 					    		ChatColor.YELLOW + "$" + result.Price + ench + 
-					    		ChatColor.GREEN + "  (" + result.Stock + " left)");
+					    		ChatColor.GREEN + "  " + stockdisplay);
 						cnt++;
 					}
 					
@@ -209,12 +216,19 @@ public class CommandListener implements CommandExecutor {
 					
 					if (stockcmd.equals("LOWEST") || (stockcmd.equals("EMPTY") && result.Stock == 0)) {
 						count++;
+						String stockdisplay;
+						if (action == "SELL") {
+							stockdisplay = "(" + result.Space + " slots)";
+						} else {
+							stockdisplay = "(" + result.Stock + " left)";
+						}
+						
 						sender.sendMessage(
 								ChatColor.GREEN + " - " + 
 					    		ChatColor.AQUA + result.ItemName + 
 					    		ChatColor.GREEN + ": " + 
 					    		ChatColor.YELLOW + "$" + result.Price + 
-					    		ChatColor.GREEN + "  (" + result.Stock + " left)");
+					    		ChatColor.GREEN + "  " + stockdisplay);
 					}
 				}
 				

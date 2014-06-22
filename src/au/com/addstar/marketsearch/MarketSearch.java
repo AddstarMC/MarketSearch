@@ -57,6 +57,7 @@ public class MarketSearch extends JavaPlugin {
 		Integer ItemID;
 		String Type;
 		Integer Stock;
+		Integer Space;
 		Double Price;
 		Boolean Enchanted = false;
 	}
@@ -131,7 +132,7 @@ public class MarketSearch extends JavaPlugin {
 			public int compare(ShopResult shop1, ShopResult shop2) {
 				
 				if (shop1.Price.equals(shop2.Price)) {
-					if (shop1.Stock > shop2.Stock) {
+					if (shop1.Space > shop2.Space) {
 						return -1;
 					} else {
 						return 1;
@@ -182,6 +183,7 @@ public class MarketSearch extends JavaPlugin {
 			    result.ItemName = shop.getItem().getType().name();
 			    result.ItemID = shop.getItem().getTypeId();
 			    result.Stock = shop.getRemainingStock();
+			    result.Space = shop.getRemainingSpace();
 			    result.Price = shop.getPrice();
 
 			    // Is this item enchanted?
