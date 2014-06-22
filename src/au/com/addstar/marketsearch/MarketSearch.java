@@ -187,8 +187,8 @@ public class MarketSearch extends JavaPlugin {
 		    		if (shop.getItem().getDurability() != SearchItem.getDurability()) { continue; }
 		    	}
 
-		    	if (shop.getRemainingStock() == 0) { continue; }			// No stock
-		    	if (shop.getShopType() != SearchType) { continue; }			// Wrong shop type
+		    	if (SearchType != ShopType.BUYING && shop.getRemainingStock() == 0) { continue; }	// No stock (ignore for BUYING shops)
+		    	if (shop.getShopType() != SearchType) { continue; }									// Wrong shop type
 		    	
 		    	ShopResult result = new ShopResult();
 			    result.ShopOwner = shop.getOwner();
@@ -312,7 +312,8 @@ public class MarketSearch extends JavaPlugin {
 		sender.sendMessage(ChatColor.GREEN + "Available MarketSearch commands:");
 
 		if (!(sender instanceof Player) || (HasPermission((Player) sender, "marketsearch.find"))) {
-			sender.sendMessage(ChatColor.AQUA + "/ms find <item> :" + ChatColor.WHITE + " Search for an item for sale in the market");
+			sender.sendMessage(ChatColor.AQUA + "/ms find <item> :" + ChatColor.WHITE + " Find items being sold in the market");
+			sender.sendMessage(ChatColor.AQUA + "/ms sell <item> :" + ChatColor.WHITE + " Find items being bought in the market");
 		}
 		
 		if (!(sender instanceof Player) || (HasPermission((Player) sender, "marketsearch.stock"))) {

@@ -31,6 +31,8 @@ public class CommandListener implements CommandExecutor {
 		
 		switch(action) {
 		case "FIND":
+		case "SELL":
+		case "BUY":
 			if ((sender instanceof Player)) {
 				if (!plugin.RequirePermission((Player) sender, "marketsearch.find")) { return false; }
 			}
@@ -62,7 +64,13 @@ public class CommandListener implements CommandExecutor {
 				sender.sendMessage(ChatColor.GREEN + "Searching for: " + 
 						ChatColor.YELLOW + "(" + searchfor.getTypeId() + ":" + searchfor.getData().getData() + ") " + 
 						ChatColor.WHITE + plugin.EssPlugin.getItemDb().names(searchfor));
-				List<ShopResult> results = plugin.SearchMarket(searchfor, ShopType.SELLING);
+
+				List<ShopResult> results;
+				if (action.equals("SELL")) {
+					results = plugin.SearchMarket(searchfor, ShopType.BUYING);
+				} else {
+					results = plugin.SearchMarket(searchfor, ShopType.SELLING);
+				}
 
 				if (results.size() > 0) {
 					int cnt = 0;
@@ -98,7 +106,11 @@ public class CommandListener implements CommandExecutor {
 						sender.sendMessage(ChatColor.LIGHT_PURPLE + "(*) Indicates an enchanted item");
 					}
 				} else {
-					sender.sendMessage(ChatColor.RED + "Sorry, no stock available in any shop");
+					if (action.equals("SELL")) {
+						sender.sendMessage(ChatColor.RED + "Sorry, there are no shops buying that.");
+					} else {
+						sender.sendMessage(ChatColor.RED + "Sorry, no stock available in any shop.");
+					}
 				}
 			} else {
 				sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
