@@ -175,7 +175,8 @@ public class MarketSearch extends JavaPlugin {
 		    		if (shop.getItem().getDurability() != SearchItem.getDurability()) { continue; }
 		    	}
 
-		    	if (SearchType != ShopType.BUYING && shop.getRemainingStock() == 0) { continue; }	// No stock (ignore for BUYING shops)
+		    	if (SearchType == ShopType.SELLING && shop.getRemainingStock() == 0) { continue; }	// No stock
+		    	if (SearchType == ShopType.BUYING && shop.getRemainingSpace() == 0) { continue; }	// No space
 		    	if (shop.getShopType() != SearchType) { continue; }									// Wrong shop type
 		    	
 		    	ShopResult result = new ShopResult();
