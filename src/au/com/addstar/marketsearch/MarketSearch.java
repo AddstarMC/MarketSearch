@@ -90,6 +90,19 @@ public class MarketSearch extends JavaPlugin {
 		// Nothing yet
 	}
 
+	enum ShopComparator implements Comparator<ShopResult> {
+	    ID_SORT {
+	        public int compare(ShopResult o1, ShopResult o2) {
+	            return o1.Price.compareTo(o2.Price);
+	        }};
+	        
+		@Override
+		public int compare(ShopResult arg0, ShopResult arg1) {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+		
+	}
 	public static class ShopResultSort {
 		public static Comparator<ShopResult> ByPrice = new Comparator<ShopResult>() {
 			@Override
@@ -113,6 +126,26 @@ public class MarketSearch extends JavaPlugin {
 			}
 		};
 
+		public static Comparator<ShopResult> ByPriceDescending = new Comparator<ShopResult>() {
+			@Override
+			public int compare(ShopResult shop1, ShopResult shop2) {
+				
+				if (shop1.Price.equals(shop2.Price)) {
+					if (shop1.Stock > shop2.Stock) {
+						return -1;
+					} else {
+						return 1;
+					}
+				}
+				
+				if (shop1.Price > shop2.Price) {
+					return -1;
+				} else {
+					return 1;
+				}
+			}
+		};
+		
 		public static Comparator<ShopResult> ByStock = new Comparator<ShopResult>() {
 			@Override
 			public int compare(ShopResult shop1, ShopResult shop2) {
@@ -126,29 +159,7 @@ public class MarketSearch extends JavaPlugin {
 			}
 		};
 	}
-	
-	public class ShopResultSortByStock implements Comparator<ShopResult> {
-		@Override
-		public int compare(ShopResult shop1, ShopResult shop2) {
-			//Log("Compare: " + shop1.ShopOwner + " $" + shop1.Price + " / " + shop2.ShopOwner + " $" + shop2.Price);
-			if (shop1.Price.equals(shop2.Price)) {
-				//Log(" - Same!");
-				if (shop1.Stock > shop2.Stock) {
-					return -1;
-				} else {
-					return 1;
-				}
-			}
-			
-			//Log(" - Not same!");
-			if (shop1.Price > shop2.Price) {
-				return 1;
-			} else {
-				return -1;
-			}
-		}
-	}
-	
+
 	public List<ShopResult> SearchMarket(ItemStack SearchItem, ShopType SearchType) {
 		List<ShopResult> results = new ArrayList<ShopResult>(); 
 		for(Entry<ShopChunk, HashMap<Location, Shop>> chunks : QSSM.getShops(MarketWorld).entrySet()) {
@@ -189,7 +200,11 @@ public class MarketSearch extends JavaPlugin {
 		}
 
 		// Order results here
-		Collections.sort(results, ShopResultSort.ByPrice);
+		if (SearchType == ShopType.SELLING) {
+			Collections.sort(results, ShopResultSort.ByPrice);
+		} else {
+			Collections.sort(results, ShopResultSort.ByPriceDescending);
+		}
 		return results;
 	}
 

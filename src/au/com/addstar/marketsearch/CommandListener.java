@@ -93,7 +93,7 @@ public class CommandListener implements CommandExecutor {
 						
 						sender.sendMessage(
 								ChatColor.GREEN + " - " + ownerstr + 
-					    		ChatColor.GREEN + ": Price " + 
+					    		ChatColor.GREEN + ": " + 
 					    		ChatColor.YELLOW + "$" + result.Price + ench + 
 					    		ChatColor.GREEN + "  (" + result.Stock + " left)");
 						cnt++;
@@ -212,7 +212,7 @@ public class CommandListener implements CommandExecutor {
 						sender.sendMessage(
 								ChatColor.GREEN + " - " + 
 					    		ChatColor.AQUA + result.ItemName + 
-					    		ChatColor.GREEN + ": Price " + 
+					    		ChatColor.GREEN + ": " + 
 					    		ChatColor.YELLOW + "$" + result.Price + 
 					    		ChatColor.GREEN + "  (" + result.Stock + " left)");
 					}
