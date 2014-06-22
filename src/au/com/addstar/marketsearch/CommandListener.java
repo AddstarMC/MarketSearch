@@ -92,7 +92,7 @@ public class CommandListener implements CommandExecutor {
 						}
 
 						String stockdisplay;
-						if (action == "SELL") {
+						if (action.equals("SELL")) {
 							stockdisplay = "(" + result.Space + " slots)";
 						} else {
 							stockdisplay = "(" + result.Stock + " left)";
@@ -217,18 +217,13 @@ public class CommandListener implements CommandExecutor {
 					if (stockcmd.equals("LOWEST") || (stockcmd.equals("EMPTY") && result.Stock == 0)) {
 						count++;
 						String stockdisplay;
-						if (action == "SELL") {
-							stockdisplay = "(" + result.Space + " slots)";
-						} else {
-							stockdisplay = "(" + result.Stock + " left)";
-						}
 						
 						sender.sendMessage(
 								ChatColor.GREEN + " - " + 
 					    		ChatColor.AQUA + result.ItemName + 
 					    		ChatColor.GREEN + ": " + 
 					    		ChatColor.YELLOW + "$" + result.Price + 
-					    		ChatColor.GREEN + "  " + stockdisplay);
+					    		ChatColor.GREEN + "  (" + result.Stock + " left)");
 					}
 				}
 				
