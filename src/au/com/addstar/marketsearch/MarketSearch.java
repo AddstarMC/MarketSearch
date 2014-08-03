@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 
@@ -13,10 +14,12 @@ import net.milkbowl.vault.chat.Chat;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.permission.Permission;
 
+import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
@@ -43,6 +46,7 @@ public class MarketSearch extends JavaPlugin {
 	public boolean DebugEnabled = false;
 	public String MarketWorld = null;
 	public ShopManager QSSM = null;
+	public Map<Enchantment, String> EnchantMap = new HashMap<Enchantment, String>();
 	
 	private static final Logger logger = Logger.getLogger("Minecraft");
 	public PluginDescriptionFile pdfFile = null;
@@ -60,6 +64,7 @@ public class MarketSearch extends JavaPlugin {
 		Integer Space;
 		Double Price;
 		Boolean Enchanted = false;
+		Map<Enchantment, Integer> Enchants = null;
 	}
 	
 	@Override
@@ -68,6 +73,7 @@ public class MarketSearch extends JavaPlugin {
 		pdfFile = this.getDescription();
 		pm = this.getServer().getPluginManager();
 		QSSM = QuickShop.instance.getShopManager();
+		LoadEnchants();
 		
 		MarketWorld = "market";
 		
@@ -91,19 +97,6 @@ public class MarketSearch extends JavaPlugin {
 		// Nothing yet
 	}
 
-	enum ShopComparator implements Comparator<ShopResult> {
-	    ID_SORT {
-	        public int compare(ShopResult o1, ShopResult o2) {
-	            return o1.Price.compareTo(o2.Price);
-	        }};
-	        
-		@Override
-		public int compare(ShopResult arg0, ShopResult arg1) {
-			// TODO Auto-generated method stub
-			return 0;
-		}
-		
-	}
 	public static class ShopResultSort {
 		public static Comparator<ShopResult> ByPrice = new Comparator<ShopResult>() {
 			@Override
@@ -189,6 +182,7 @@ public class MarketSearch extends JavaPlugin {
 
 			    // Is this item enchanted?
 			    if (shop.getItem().getEnchantments().size() > 0) {
+				    result.Enchants = shop.getItem().getEnchantments();
 			    	result.Enchanted = true;
 			    }
 
@@ -238,6 +232,47 @@ public class MarketSearch extends JavaPlugin {
 		return results;
 	}
 
+	public String getEnchantText(Map<Enchantment, Integer> enchants) {
+        List<String> elist = new ArrayList<String>();
+        for (Entry<Enchantment, Integer> e: enchants.entrySet()) {
+                Enchantment enchant = e.getKey();
+                Integer level = e.getValue();
+                String abbr = EnchantMap.get(enchant);
+                if (abbr == null) {
+                        abbr = "??"; 
+                }
+                elist.add(abbr + level);
+        }
+        
+        // Return sorted string list
+        return StringUtils.join(elist.toArray(), "/");
+	}
+	
+	private void LoadEnchants() {
+        EnchantMap.clear();
+        EnchantMap.put(Enchantment.ARROW_DAMAGE, "dmg");
+        EnchantMap.put(Enchantment.ARROW_FIRE, "fire");
+        EnchantMap.put(Enchantment.ARROW_INFINITE, "inf");
+        EnchantMap.put(Enchantment.ARROW_KNOCKBACK, "knock");
+        EnchantMap.put(Enchantment.DAMAGE_ALL, "dmg");
+        EnchantMap.put(Enchantment.DAMAGE_ARTHROPODS, "bane");
+        EnchantMap.put(Enchantment.DAMAGE_UNDEAD, "smite");
+        EnchantMap.put(Enchantment.DIG_SPEED, "eff");
+        EnchantMap.put(Enchantment.DURABILITY, "dura");
+        EnchantMap.put(Enchantment.FIRE_ASPECT, "fire");
+        EnchantMap.put(Enchantment.KNOCKBACK, "knock");
+        EnchantMap.put(Enchantment.LOOT_BONUS_BLOCKS, "fort");
+        EnchantMap.put(Enchantment.LOOT_BONUS_MOBS, "fort");
+        EnchantMap.put(Enchantment.OXYGEN, "air");
+        EnchantMap.put(Enchantment.PROTECTION_ENVIRONMENTAL, "prot");
+        EnchantMap.put(Enchantment.PROTECTION_EXPLOSIONS, "blast");
+        EnchantMap.put(Enchantment.PROTECTION_FALL, "fall");
+        EnchantMap.put(Enchantment.PROTECTION_PROJECTILE, "proj");
+        EnchantMap.put(Enchantment.SILK_TOUCH, "silk");
+        EnchantMap.put(Enchantment.THORNS, "thorn");
+        EnchantMap.put(Enchantment.WATER_WORKER, "aqua");
+	}
+	
 	public void Log(String data) {
 		logger.info(pdfFile.getName() + " " + data);
 	}

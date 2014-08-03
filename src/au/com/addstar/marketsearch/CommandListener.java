@@ -3,6 +3,7 @@ package au.com.addstar.marketsearch;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -40,15 +41,24 @@ public class CommandListener implements CommandExecutor {
 				return true;
 			}
 			
-			// Build search string from args (but drop first arg)
+			// Grab item name (can contain spaces) and page number at the end (if applicable)
+			int page = 1;
 			String search = "";
-			for (int x = 1; x < args.length; x++) {
-				search += args[x];
+			String lastarg = null;
+			
+			if (args.length > 2) {
+				lastarg = args[args.length-1];
 			}
 
-			// Fix for redstone torches
-			//if (search.contains("REDSTONE_TORCH") || search.contains("REDSTONETORCH")) { search = "REDSTONE_TORCH_ON"; }
-			
+			if ((lastarg != null) && (StringUtils.isNumeric(lastarg))) {
+				// Ending is a page number
+				page = Integer.valueOf(lastarg);
+				if (page < 1) page = 1;
+				search = StringUtils.join(args, "", 1, args.length-1);
+			} else {
+				search = StringUtils.join(args, "", 1, args.length);
+			}
+
 			// Validate the material and perform the search
 			ItemStack searchfor;
 			try {
@@ -59,10 +69,6 @@ public class CommandListener implements CommandExecutor {
 			}
 			
 			if (searchfor != null) {
-				sender.sendMessage(ChatColor.GREEN + "Searching for: " + 
-						ChatColor.YELLOW + "(" + searchfor.getTypeId() + ":" + searchfor.getData().getData() + ") " + 
-						ChatColor.WHITE + plugin.EssPlugin.getItemDb().names(searchfor));
-
 				List<ShopResult> results;
 				if (action.equals("SELL")) {
 					results = plugin.SearchMarket(searchfor, ShopType.BUYING);
@@ -70,45 +76,49 @@ public class CommandListener implements CommandExecutor {
 					results = plugin.SearchMarket(searchfor, ShopType.SELLING);
 				}
 
+				int perpage = 10;
+				int pages = (int) Math.ceil((double) results.size() / perpage);
+
+				if (page > pages) {
+					sender.sendMessage(ChatColor.RED + "That result page does not exist.");
+					return true;
+				}
+				
+				sender.sendMessage(ChatColor.GREEN + "Page " + page + "/" + pages + ": " +  
+						ChatColor.YELLOW + "(" + searchfor.getTypeId() + ":" + searchfor.getData().getData() + ") " + 
+						ChatColor.WHITE + plugin.EssPlugin.getItemDb().names(searchfor));
+
+
 				if (results.size() > 0) {
-					int cnt = 0;
 					String ownerstr;
 					String ench;
-					Boolean enchfound = false;
-					for (ShopResult result : results) {
-						// Cap results at 10
-						if (cnt > 11) { break; }
-						if (result.PlotOwner.equals(result.ShopOwner)) {
-							ownerstr = ChatColor.AQUA + result.PlotOwner;
-						} else {
-							ownerstr = ChatColor.AQUA + result.PlotOwner + ChatColor.BLUE + " (" + result.ShopOwner + ")";
-						}
+					int start = (perpage * (page - 1));
+					int end   = start + perpage - 1;
+					for (int x = start; x <= end; x++) {
+						if (x > (results.size() - 1)) break;		// Don't go beyond the end of the results
+						
+						ShopResult result = results.get(x);
+						ownerstr = ChatColor.AQUA + result.PlotOwner;
 						
 						if (result.Enchanted) {
-							ench = " " + ChatColor.LIGHT_PURPLE + "(*)" + " ";
-							enchfound = true;
+							ench = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + plugin.getEnchantText(result.Enchants) + ChatColor.DARK_PURPLE + "]";
+							ench = ench.replace("/", ChatColor.DARK_PURPLE + "/" + ChatColor.LIGHT_PURPLE);
 						} else {
 							ench = "";
 						}
 
 						String stockdisplay;
 						if (action.equals("SELL")) {
-							stockdisplay = "(" + result.Space + " slots)";
+							stockdisplay = ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + result.Space + " slots" + ChatColor.DARK_GREEN + ")";
 						} else {
-							stockdisplay = "(" + result.Stock + " left)";
+							stockdisplay = ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + result.Space + " left" + ChatColor.DARK_GREEN + ")";
 						}
 						
 						sender.sendMessage(
 								ChatColor.GREEN + " - " + ownerstr + 
 					    		ChatColor.GREEN + ": " + 
 					    		ChatColor.YELLOW + "$" + result.Price + ench + 
-					    		ChatColor.GREEN + "  " + stockdisplay);
-						cnt++;
-					}
-					
-					// If enchanted items are in the results, tell them
-					if (enchfound) {
-						sender.sendMessage(ChatColor.LIGHT_PURPLE + "(*) Indicates an enchanted item");
+					    		ChatColor.GREEN + " " + stockdisplay);
 					}
 				} else {
 					if (action.equals("SELL")) {
