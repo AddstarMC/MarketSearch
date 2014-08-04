@@ -56,7 +56,7 @@
     
     <!-- Used for economy stuff -->
     <dependency>
-      <groupId>net.milkbowl</groupId>
+      <groupId>net.milkbowl.vault</groupId>
       <artifactId>Vault</artifactId>
       <version>1.4.1</version>
     </dependency>
