@@ -80,7 +80,7 @@ public class CommandListener implements CommandExecutor {
 				int pages = (int) Math.ceil((double) results.size() / perpage);
 
 				if (page > pages) {
-					sender.sendMessage(ChatColor.RED + "That result page does not exist.");
+					sender.sendMessage(ChatColor.RED + "Sorry, no results found.");
 					return true;
 				}
 				
@@ -111,7 +111,7 @@ public class CommandListener implements CommandExecutor {
 						if (action.equals("SELL")) {
 							stockdisplay = ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + result.Space + " slots" + ChatColor.DARK_GREEN + ")";
 						} else {
-							stockdisplay = ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + result.Space + " left" + ChatColor.DARK_GREEN + ")";
+							stockdisplay = ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + result.Stock + " left" + ChatColor.DARK_GREEN + ")";
 						}
 						
 						sender.sendMessage(
