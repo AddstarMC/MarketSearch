@@ -52,7 +52,7 @@
     <dependency>
       <groupId>net.milkbowl</groupId>
       <artifactId>vault</artifactId>
-      <version>1.2.12</version>
+      <version>1.4.1</version>
     </dependency>
 
     <dependency>
@@ -70,7 +70,7 @@
     <dependency>
       <groupId>com.worldcretornica</groupId>
       <artifactId>plotme</artifactId>
-      <version>0.13b</version>
+      <version>0.13f</version>
     </dependency>
   </dependencies>
 
