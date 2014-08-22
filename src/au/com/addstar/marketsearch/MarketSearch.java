@@ -22,7 +22,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -32,7 +31,9 @@ import org.maxgamer.QuickShop.Shop.ShopChunk;
 import org.maxgamer.QuickShop.Shop.ShopManager;
 import org.maxgamer.QuickShop.Shop.ShopType;
 
-import com.earth2me.essentials.IEssentials;
+import au.com.addstar.monolith.lookup.Lookup;
+import au.com.addstar.monolith.lookup.MaterialDefinition;
+
 import com.worldcretornica.plotme.Plot;
 import com.worldcretornica.plotme.PlotManager;
 
@@ -52,8 +53,6 @@ public class MarketSearch extends JavaPlugin {
 	public PluginDescriptionFile pdfFile = null;
 	public PluginManager pm = null;
 
-	public IEssentials EssPlugin;
-	
 	static class ShopResult {
 		String PlotOwner;
 		String ShopOwner;
@@ -79,15 +78,6 @@ public class MarketSearch extends JavaPlugin {
 		
 		getCommand("marketsearch").setExecutor(new CommandListener(this));
 		getCommand("marketsearch").setAliases(Arrays.asList("ms"));
-		
-		final Plugin ess = this.pm.getPlugin("Essentials");
-		if (ess != null) {
-			EssPlugin = (IEssentials) ess;
-			Log("Found Essentials - It will be used for item lookup");
-		} else {
-			EssPlugin = null;
-			Log("Essentials not found! Using native Bukkit item lookup");
-		}
 		
 		Log(pdfFile.getName() + " " + pdfFile.getVersion() + " has been enabled");
 	}
@@ -357,4 +347,51 @@ public class MarketSearch extends JavaPlugin {
 		}
 	}
 	
+	public MaterialDefinition getItem(String search)
+	{
+		String itemname = search.split(":")[0];
+		MaterialDefinition def = null;
+		short data = 0;
+		
+		if(search.contains(":")) {
+			String dpart = search.split(":")[1];
+			try {
+				data = Short.parseShort(dpart);
+				if(data < 0)
+					throw new IllegalArgumentException("Data value for " + itemname + " cannot be less than 0");
+			}
+			catch(NumberFormatException e) {
+				throw new IllegalArgumentException("Data value after " + itemname);
+			}
+		}
+
+		def = getMaterial(itemname);
+		if (def == null) return null;
+	
+		return new MaterialDefinition(def.getMaterial(), data);
+	}
+
+    public MaterialDefinition getMaterial(String name)
+	{
+		// Bukkit name
+		Material mat = Material.getMaterial(name.toUpperCase());
+		if (mat != null)
+			return new MaterialDefinition(mat, (short)0);
+		
+		// Id
+		try
+		{
+			short id = Short.parseShort(name);
+			mat = Material.getMaterial(id);
+		}
+		catch(NumberFormatException e)
+		{
+		}
+		
+		if(mat != null)
+			return new MaterialDefinition(mat, (short)0);
+
+		// ItemDB
+		return Lookup.findItemByName(name);
+	}
 }

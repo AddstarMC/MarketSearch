@@ -2,6 +2,7 @@ package au.com.addstar.marketsearch;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
@@ -9,11 +10,12 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.maxgamer.QuickShop.Shop.ShopType;
 
 import au.com.addstar.marketsearch.MarketSearch.ShopResult;
 import au.com.addstar.marketsearch.MarketSearch.ShopResultSort;
+import au.com.addstar.monolith.lookup.Lookup;
+import au.com.addstar.monolith.lookup.MaterialDefinition;
 
 public class CommandListener implements CommandExecutor {
 	private MarketSearch plugin;
@@ -60,9 +62,9 @@ public class CommandListener implements CommandExecutor {
 			}
 
 			// Validate the material and perform the search
-			ItemStack searchfor;
+			MaterialDefinition searchfor;
 			try {
-				searchfor = plugin.EssPlugin.getItemDb().get(search, 1);
+				searchfor = plugin.getItem(search);
 			} catch (Exception e) {
 				sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
 				return true;
@@ -71,9 +73,9 @@ public class CommandListener implements CommandExecutor {
 			if (searchfor != null) {
 				List<ShopResult> results;
 				if (action.equals("SELL")) {
-					results = plugin.SearchMarket(searchfor, ShopType.BUYING);
+					results = plugin.SearchMarket(searchfor.asItemStack(1), ShopType.BUYING);
 				} else {
-					results = plugin.SearchMarket(searchfor, ShopType.SELLING);
+					results = plugin.SearchMarket(searchfor.asItemStack(1), ShopType.SELLING);
 				}
 
 				int perpage = 10;
@@ -83,11 +85,11 @@ public class CommandListener implements CommandExecutor {
 					sender.sendMessage(ChatColor.RED + "Sorry, no results found.");
 					return true;
 				}
-				
-				sender.sendMessage(ChatColor.GREEN + "Page " + page + "/" + pages + ": " +  
-						ChatColor.YELLOW + "(" + searchfor.getTypeId() + ":" + searchfor.getData().getData() + ") " + 
-						ChatColor.WHITE + plugin.EssPlugin.getItemDb().names(searchfor));
 
+				Set<String> names = Lookup.findNameByItem(searchfor);
+				sender.sendMessage(ChatColor.GREEN + "Page " + page + "/" + pages + ": " +  
+						ChatColor.YELLOW + "(" + searchfor.getMaterial().getId() + ":" + searchfor.getData() + ") " + 
+						ChatColor.WHITE + StringUtils.join(names, ", "));
 
 				if (results.size() > 0) {
 					String ownerstr;
@@ -226,8 +228,6 @@ public class CommandListener implements CommandExecutor {
 					
 					if (stockcmd.equals("LOWEST") || (stockcmd.equals("EMPTY") && result.Stock == 0)) {
 						count++;
-						String stockdisplay;
-						
 						sender.sendMessage(
 								ChatColor.GREEN + " - " + 
 					    		ChatColor.AQUA + result.ItemName + 
