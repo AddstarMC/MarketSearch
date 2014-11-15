@@ -258,6 +258,7 @@ public class MarketSearch extends JavaPlugin {
         EnchantMap.put(Enchantment.PROTECTION_EXPLOSIONS, "blast");
         EnchantMap.put(Enchantment.PROTECTION_FALL, "fall");
         EnchantMap.put(Enchantment.PROTECTION_PROJECTILE, "proj");
+        EnchantMap.put(Enchantment.PROTECTION_FIRE, "fireprot");
         EnchantMap.put(Enchantment.SILK_TOUCH, "silk");
         EnchantMap.put(Enchantment.THORNS, "thorn");
         EnchantMap.put(Enchantment.WATER_WORKER, "aqua");
