@@ -163,7 +163,7 @@ public class MarketSearch extends JavaPlugin {
 		    	if (shop.getShopType() != SearchType) { continue; }									// Wrong shop type
 		    	
 		    	ShopResult result = new ShopResult();
-			    result.ShopOwner = shop.getOwner();
+			    result.ShopOwner = shop.getOwner().getName();
 			    result.ItemName = shop.getItem().getType().name();
 			    result.ItemID = shop.getItem().getTypeId();
 			    result.Stock = shop.getRemainingStock();
@@ -201,9 +201,9 @@ public class MarketSearch extends JavaPlugin {
 			
 		    for(Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
 		    	Shop shop = inChunk.getValue();
-		    	if (shop.getOwner().equalsIgnoreCase(player)) {
+		    	if (shop.getOwner().getName().equalsIgnoreCase(player)) {
 			    	ShopResult result = new ShopResult();
-				    result.ShopOwner = shop.getOwner();
+				    result.ShopOwner = shop.getOwner().getName();
 				    result.ItemName = shop.getItem().getType().name();
 				    result.ItemID = shop.getItem().getTypeId();
 				    result.Stock = shop.getRemainingStock();
