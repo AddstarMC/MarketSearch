@@ -15,6 +15,7 @@ import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.permission.Permission;
 
 import org.apache.commons.lang.StringUtils;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -34,8 +35,14 @@ import org.maxgamer.QuickShop.Shop.ShopType;
 import au.com.addstar.monolith.lookup.Lookup;
 import au.com.addstar.monolith.lookup.MaterialDefinition;
 
-import com.worldcretornica.plotme.Plot;
-import com.worldcretornica.plotme.PlotManager;
+import com.worldcretornica.plotme_core.Plot;
+import com.worldcretornica.plotme_core.PlotMeCoreManager;
+import com.worldcretornica.plotme_core.api.ILocation;
+import com.worldcretornica.plotme_core.api.IWorld;
+import com.worldcretornica.plotme_core.api.PlotMeAPI;
+import com.worldcretornica.plotme_core.bukkit.PlotMe_CorePlugin;
+import com.worldcretornica.plotme_core.bukkit.api.BukkitLocation;
+import com.worldcretornica.plotme_core.bukkit.api.BukkitWorld;
 
 public class MarketSearch extends JavaPlugin {
 	public static MarketSearch instance;
@@ -47,6 +54,7 @@ public class MarketSearch extends JavaPlugin {
 	public boolean DebugEnabled = false;
 	public String MarketWorld = null;
 	public ShopManager QSSM = null;
+	public PlotMe_CorePlugin PlotMePlugin = null;
 	public Map<Enchantment, String> EnchantMap = new HashMap<Enchantment, String>();
 	
 	private static final Logger logger = Logger.getLogger("Minecraft");
@@ -72,6 +80,7 @@ public class MarketSearch extends JavaPlugin {
 		pdfFile = this.getDescription();
 		pm = this.getServer().getPluginManager();
 		QSSM = QuickShop.instance.getShopManager();
+		PlotMePlugin = (PlotMe_CorePlugin) pm.getPlugin("PlotMe");
 		LoadEnchants();
 		
 		MarketWorld = "market";
@@ -145,7 +154,9 @@ public class MarketSearch extends JavaPlugin {
 	}
 
 	public List<ShopResult> SearchMarket(ItemStack SearchItem, ShopType SearchType) {
-		List<ShopResult> results = new ArrayList<ShopResult>(); 
+	    IWorld world = new BukkitWorld(Bukkit.getWorld(MarketWorld));
+	    PlotMeCoreManager PMCM = PlotMePlugin.getAPI().getPlotMeCoreManager();
+	    List<ShopResult> results = new ArrayList<ShopResult>(); 
 		for(Entry<ShopChunk, HashMap<Location, Shop>> chunks : QSSM.getShops(MarketWorld).entrySet()) {
 			
 		    for(Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
@@ -176,9 +187,10 @@ public class MarketSearch extends JavaPlugin {
 			    	result.Enchanted = true;
 			    }
 
-			    Plot p = PlotManager.getPlotById(shop.getLocation());
+			    ILocation loc = new BukkitLocation(shop.getLocation());
+			    Plot p = PMCM.getPlotById(PlotMeCoreManager.getPlotId(loc), world);  
 			    if (p != null) {
-			    	result.PlotOwner = p.owner;
+			    	result.PlotOwner = p.getOwner();
 			    	results.add(result);
 			    } else {
 			    	Warn("Unable to find plot! " + shop.getLocation().toString());
@@ -196,6 +208,8 @@ public class MarketSearch extends JavaPlugin {
 	}
 
 	public List<ShopResult> getPlayerShops(String player) {
+	    IWorld world = new BukkitWorld(Bukkit.getWorld(MarketWorld));
+	    PlotMeCoreManager PMCM = PlotMePlugin.getAPI().getPlotMeCoreManager();
 		List<ShopResult> results = new ArrayList<ShopResult>();
 		for(Entry<ShopChunk, HashMap<Location, Shop>> chunks : QSSM.getShops(MarketWorld).entrySet()) {
 			
@@ -209,9 +223,10 @@ public class MarketSearch extends JavaPlugin {
 				    result.Stock = shop.getRemainingStock();
 				    result.Price = shop.getPrice();
 	
-				    Plot p = PlotManager.getPlotById(shop.getLocation());
+				    ILocation loc = new BukkitLocation(shop.getLocation());
+				    Plot p = PMCM.getPlotById(PlotMeCoreManager.getPlotId(loc), world);  
 				    if (p != null) {
-				    	result.PlotOwner = p.owner;
+				    	result.PlotOwner = p.getOwner();
 				    	results.add(result);
 				    } else {
 				    	Warn("Unable to find plot! " + shop.getLocation().toString());
