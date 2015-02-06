@@ -39,7 +39,6 @@ import com.worldcretornica.plotme_core.Plot;
 import com.worldcretornica.plotme_core.PlotMeCoreManager;
 import com.worldcretornica.plotme_core.api.ILocation;
 import com.worldcretornica.plotme_core.api.IWorld;
-import com.worldcretornica.plotme_core.api.PlotMeAPI;
 import com.worldcretornica.plotme_core.bukkit.PlotMe_CorePlugin;
 import com.worldcretornica.plotme_core.bukkit.api.BukkitLocation;
 import com.worldcretornica.plotme_core.bukkit.api.BukkitWorld;
@@ -188,7 +187,7 @@ public class MarketSearch extends JavaPlugin {
 			    }
 
 			    ILocation loc = new BukkitLocation(shop.getLocation());
-			    Plot p = PMCM.getPlotById(PlotMeCoreManager.getPlotId(loc), world);  
+			    Plot p = PMCM.getPlotById(PMCM.getPlotId(loc), world);
 			    if (p != null) {
 			    	result.PlotOwner = p.getOwner();
 			    	results.add(result);
@@ -224,7 +223,7 @@ public class MarketSearch extends JavaPlugin {
 				    result.Price = shop.getPrice();
 	
 				    ILocation loc = new BukkitLocation(shop.getLocation());
-				    Plot p = PMCM.getPlotById(PlotMeCoreManager.getPlotId(loc), world);  
+				    Plot p = PMCM.getPlotById(PMCM.getPlotId(loc), world);
 				    if (p != null) {
 				    	result.PlotOwner = p.getOwner();
 				    	results.add(result);
