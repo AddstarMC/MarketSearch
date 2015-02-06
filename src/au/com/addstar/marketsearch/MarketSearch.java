@@ -154,7 +154,7 @@ public class MarketSearch extends JavaPlugin {
 
 	public List<ShopResult> SearchMarket(ItemStack SearchItem, ShopType SearchType) {
 	    IWorld world = new BukkitWorld(Bukkit.getWorld(MarketWorld));
-	    PlotMeCoreManager PMCM = PlotMePlugin.getAPI().getPlotMeCoreManager();
+	    PlotMeCoreManager PMCM = PlotMeCoreManager.getInstance();
 	    List<ShopResult> results = new ArrayList<ShopResult>(); 
 		for(Entry<ShopChunk, HashMap<Location, Shop>> chunks : QSSM.getShops(MarketWorld).entrySet()) {
 			
@@ -208,7 +208,7 @@ public class MarketSearch extends JavaPlugin {
 
 	public List<ShopResult> getPlayerShops(String player) {
 	    IWorld world = new BukkitWorld(Bukkit.getWorld(MarketWorld));
-	    PlotMeCoreManager PMCM = PlotMePlugin.getAPI().getPlotMeCoreManager();
+	    PlotMeCoreManager PMCM = PlotMeCoreManager.getInstance();
 		List<ShopResult> results = new ArrayList<ShopResult>();
 		for(Entry<ShopChunk, HashMap<Location, Shop>> chunks : QSSM.getShops(MarketWorld).entrySet()) {
 			
