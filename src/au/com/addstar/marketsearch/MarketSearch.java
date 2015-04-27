@@ -366,8 +366,13 @@ public class MarketSearch extends JavaPlugin {
 	{
 		String itemname = search.split(":")[0];
 		MaterialDefinition def = null;
-		short data = 0;
-		
+
+		// Get item value + data value
+		def = getMaterial(itemname);
+		if (def == null) return null;
+		short data = def.getData();
+
+		// Check if we should override the data value with one supplied
 		if(search.contains(":")) {
 			String dpart = search.split(":")[1];
 			try {
@@ -379,9 +384,6 @@ public class MarketSearch extends JavaPlugin {
 				throw new IllegalArgumentException("Data value after " + itemname);
 			}
 		}
-
-		def = getMaterial(itemname);
-		if (def == null) return null;
 	
 		return new MaterialDefinition(def.getMaterial(), data);
 	}
