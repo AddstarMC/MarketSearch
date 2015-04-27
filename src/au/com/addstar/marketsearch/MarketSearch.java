@@ -364,28 +364,29 @@ public class MarketSearch extends JavaPlugin {
 	
 	public MaterialDefinition getItem(String search)
 	{
-		String itemname = search.split(":")[0];
-		MaterialDefinition def = null;
-
 		// Get item value + data value
-		def = getMaterial(itemname);
+		String[] parts = search.split(":");
+		String itemname = parts[0];
+		MaterialDefinition def = getMaterial(itemname);
 		if (def == null) return null;
-		short data = def.getData();
 
 		// Check if we should override the data value with one supplied
-		if(search.contains(":")) {
-			String dpart = search.split(":")[1];
+		if(parts.length > 1) {
+			String dpart = parts[1];
 			try {
-				data = Short.parseShort(dpart);
+				short data = Short.parseShort(dpart);
 				if(data < 0)
 					throw new IllegalArgumentException("Data value for " + itemname + " cannot be less than 0");
+
+				// Return new definition with specified data value
+				return new MaterialDefinition(def.getMaterial(), data);
 			}
 			catch(NumberFormatException e) {
 				throw new IllegalArgumentException("Data value after " + itemname);
 			}
+		} else {
+			return def;
 		}
-	
-		return new MaterialDefinition(def.getMaterial(), data);
 	}
 
     public MaterialDefinition getMaterial(String name)
