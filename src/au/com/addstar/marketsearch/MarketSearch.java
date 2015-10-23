@@ -348,6 +348,7 @@ public class MarketSearch extends JavaPlugin {
 		if (!(sender instanceof Player) || (HasPermission((Player) sender, "marketsearch.find"))) {
 			sender.sendMessage(ChatColor.AQUA + "/ms find <item> :" + ChatColor.WHITE + " Find items being sold in the market");
 			sender.sendMessage(ChatColor.AQUA + "/ms sell <item> :" + ChatColor.WHITE + " Find items being bought in the market");
+			sender.sendMessage(ChatColor.AQUA + "/ms find/sell hand :" + ChatColor.WHITE + " Search using the item you are currently holding");
 		}
 		
 		if (!(sender instanceof Player) || (HasPermission((Player) sender, "marketsearch.stock"))) {
