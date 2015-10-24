@@ -12,6 +12,10 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.maxgamer.QuickShop.Shop.ShopType;
 
+//V: added these 2 for /ms find hand
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.Material;
+
 import au.com.addstar.marketsearch.MarketSearch.ShopResult;
 import au.com.addstar.marketsearch.MarketSearch.ShopResultSort;
 import au.com.addstar.monolith.lookup.Lookup;
@@ -39,7 +43,7 @@ public class CommandListener implements CommandExecutor {
 			}
 			
 			if (args.length == 1) {
-				sender.sendMessage(ChatColor.RED + "Please specify an item to search for.");
+				sender.sendMessage(ChatColor.RED + "Please specify an item to search for, or 'hand' to search for what you are currently holding (ie /ms find hand).");
 				return true;
 			}
 			
@@ -61,13 +65,26 @@ public class CommandListener implements CommandExecutor {
 				search = StringUtils.join(args, "", 1, args.length);
 			}
 
-			// Validate the material and perform the search
+			// Validate the material and perform the search. V: But first, check for 'hand' argument
 			MaterialDefinition searchfor;
-			try {
-				searchfor = plugin.getItem(search);
-			} catch (Exception e) {
-				sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
-				return true;
+			if (search.toUpperCase().equals("HAND"))
+            		{
+        			Player ply = (Player) sender;
+                		ItemStack hand = ply.getItemInHand();
+        			if (hand != null && hand.getType() != Material.AIR) /* V: Empty hand is Material.AIR */
+                    			searchfor = MaterialDefinition.from(hand);
+                		else {
+					sender.sendMessage(ChatColor.RED + "You need to be holding an item first!");
+					return true;
+				}
+			}
+			else {
+				try {
+					searchfor = plugin.getItem(search);
+				} catch (Exception e) {
+					sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
+					return true;
+				}
 			}
 			
 			if (searchfor != null) {
