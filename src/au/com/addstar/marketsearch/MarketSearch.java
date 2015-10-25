@@ -54,7 +54,7 @@ public class MarketSearch extends JavaPlugin {
 	public String MarketWorld = null;
 	public ShopManager QSSM = null;
 	public PlotMe_CorePlugin PlotMePlugin = null;
-	public Map<Enchantment, String> EnchantMap = new HashMap<Enchantment, String>();
+	public Map<Enchantment, String> EnchantMap = new HashMap<>();
 	
 	private static final Logger logger = Logger.getLogger("Minecraft");
 	public PluginDescriptionFile pdfFile = null;
@@ -155,7 +155,8 @@ public class MarketSearch extends JavaPlugin {
 	public List<ShopResult> SearchMarket(ItemStack SearchItem, ShopType SearchType) {
 	    IWorld world = new BukkitWorld(Bukkit.getWorld(MarketWorld));
 	    PlotMeCoreManager PMCM = PlotMeCoreManager.getInstance();
-	    List<ShopResult> results = new ArrayList<ShopResult>(); 
+	    List<ShopResult> results = new ArrayList<>();
+
 		for(Entry<ShopChunk, HashMap<Location, Shop>> chunks : QSSM.getShops(MarketWorld).entrySet()) {
 			
 		    for(Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
@@ -209,7 +210,7 @@ public class MarketSearch extends JavaPlugin {
 	public List<ShopResult> getPlayerShops(String player) {
 	    IWorld world = new BukkitWorld(Bukkit.getWorld(MarketWorld));
 	    PlotMeCoreManager PMCM = PlotMeCoreManager.getInstance();
-		List<ShopResult> results = new ArrayList<ShopResult>();
+		List<ShopResult> results = new ArrayList<>();
 		for(Entry<ShopChunk, HashMap<Location, Shop>> chunks : QSSM.getShops(MarketWorld).entrySet()) {
 			
 		    for(Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
@@ -237,7 +238,7 @@ public class MarketSearch extends JavaPlugin {
 	}
 
 	public String getEnchantText(Map<Enchantment, Integer> enchants) {
-        List<String> elist = new ArrayList<String>();
+        List<String> elist = new ArrayList<>();
         for (Entry<Enchantment, Integer> e: enchants.entrySet()) {
                 Enchantment enchant = e.getKey();
                 Integer level = e.getValue();
@@ -368,6 +369,14 @@ public class MarketSearch extends JavaPlugin {
 		// Get item value + data value
 		String[] parts = search.split(":");
 		String itemname = parts[0];
+
+		// Auto-change carrot to carrot_item (ID 391) and potato to potato_item (ID 392)
+		if (itemname.equalsIgnoreCase("carrot"))
+			itemname = "CARROT_ITEM";
+
+		if (itemname.equalsIgnoreCase("potato"))
+			itemname = "POTATO_ITEM";
+
 		MaterialDefinition def = getMaterial(itemname);
 		if (def == null) return null;
 
