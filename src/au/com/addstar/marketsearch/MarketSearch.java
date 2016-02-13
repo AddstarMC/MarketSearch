@@ -104,17 +104,27 @@ public class MarketSearch extends JavaPlugin {
 					//Log(" - Same!");
 					if (shop1.Stock > shop2.Stock) {
 						return -1;
-					} else {
-						return 1;
 					}
+
+					if (shop1.Stock < shop2.Stock) {
+						return 1;
+					} else {
+						return 0;
+					}
+
 				}
 				
 				//Log(" - Not same!");
 				if (shop1.Price > shop2.Price) {
 					return 1;
-				} else {
-					return -1;
 				}
+
+				if (shop1.Price < shop2.Price) {
+					return -1;
+				} else {
+					return 0;
+				}
+
 			}
 		};
 
@@ -125,15 +135,23 @@ public class MarketSearch extends JavaPlugin {
 				if (shop1.Price.equals(shop2.Price)) {
 					if (shop1.Space > shop2.Space) {
 						return -1;
-					} else {
+					}
+
+					if (shop1.Space < shop2.Space) {
 						return 1;
+					} else {
+						return 0;
 					}
 				}
-				
+
 				if (shop1.Price > shop2.Price) {
 					return -1;
-				} else {
+				}
+
+				if (shop1.Price < shop2.Price) {
 					return 1;
+				} else {
+					return 0;
 				}
 			}
 		};
@@ -142,7 +160,7 @@ public class MarketSearch extends JavaPlugin {
 			@Override
 			public int compare(ShopResult shop1, ShopResult shop2) {
 				if (shop1.Stock == shop2.Stock) return 0;
-				
+
 				if (shop1.Stock > shop2.Stock) {
 					return 1;
 				} else {
@@ -162,7 +180,7 @@ public class MarketSearch extends JavaPlugin {
 		    for(Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
 		    	Shop shop = inChunk.getValue();
 
-		    	if (shop.getItem().getTypeId() != SearchItem.getTypeId()) { continue; }	// Wrong item
+		    	if (shop.getItem().getType() != SearchItem.getType()) { continue; }	// Wrong item
 
 		    	// Only compare data/durability for items with no real durability (blocks, etc)
 		    	if (SearchItem.getType().getMaxDurability() == 0) {
@@ -196,6 +214,10 @@ public class MarketSearch extends JavaPlugin {
 			    	Warn("Unable to find plot! " + shop.getLocation().toString());
 			    }
 		    }
+		}
+
+		if (DebugEnabled) {
+			logger.info("Sorting " + results.size() + " results for item " + SearchItem.getType().name());
 		}
 
 		// Order results here
