@@ -68,7 +68,7 @@ public class CommandListener implements CommandExecutor {
 			if (search.equalsIgnoreCase("hand"))
             		{
         			Player ply = (Player) sender;
-                		ItemStack hand = ply.getItemInHand();
+                		ItemStack hand = ply.getInventory().getItemInMainHand();
         			if (hand != null && hand.getType() != Material.AIR) /* Empty hand is Material.AIR */
                     			searchfor = MaterialDefinition.from(hand);
                 		else {
