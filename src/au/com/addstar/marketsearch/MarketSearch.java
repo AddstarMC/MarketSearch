@@ -65,6 +65,7 @@ public class MarketSearch extends JavaPlugin {
 		String ShopOwner;
 		String ItemName;
 		Integer ItemID;
+		byte Data;
 		String Type;
 		Integer Stock;
 		Integer Space;
@@ -191,13 +192,7 @@ public class MarketSearch extends JavaPlugin {
 		    	if (SearchType == ShopType.BUYING && shop.getRemainingSpace() == 0) { continue; }	// No space
 		    	if (shop.getShopType() != SearchType) { continue; }									// Wrong shop type
 		    	
-		    	ShopResult result = new ShopResult();
-			    result.ShopOwner = shop.getOwner().getName();
-			    result.ItemName = shop.getItem().getType().name();
-			    result.ItemID = shop.getItem().getTypeId();
-			    result.Stock = shop.getRemainingStock();
-			    result.Space = shop.getRemainingSpace();
-			    result.Price = shop.getPrice();
+		    	ShopResult result = StoreResult(shop);
 
 			    // Is this item enchanted?
 			    if (shop.getItem().getEnchantments().size() > 0) {
@@ -238,13 +233,9 @@ public class MarketSearch extends JavaPlugin {
 		    for(Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
 		    	Shop shop = inChunk.getValue();
 		    	if (shop.getOwner().getName().equalsIgnoreCase(player)) {
-			    	ShopResult result = new ShopResult();
-				    result.ShopOwner = shop.getOwner().getName();
-				    result.ItemName = shop.getItem().getType().name();
-				    result.ItemID = shop.getItem().getTypeId();
-				    result.Stock = shop.getRemainingStock();
-				    result.Price = shop.getPrice();
-	
+
+					ShopResult result = StoreResult(shop);
+
 				    ILocation loc = new BukkitLocation(shop.getLocation());
 				    Plot p = PMCM.getPlotById(PMCM.getPlotId(loc), world);
 				    if (p != null) {
@@ -444,4 +435,40 @@ public class MarketSearch extends JavaPlugin {
 		// ItemDB
 		return Lookup.findItemByName(name);
 	}
+
+	private String InitialCaps(String itemName) {
+		String[] parts = itemName.split("_");
+		StringBuilder itemNameInitialCaps = new StringBuilder();
+
+		for (String part : parts) {
+			if (itemNameInitialCaps.length() > 0) {
+				itemNameInitialCaps.append("_");
+			}
+
+			itemNameInitialCaps.append(part.substring(0, 1).toUpperCase());
+			itemNameInitialCaps.append(part.substring(1).toLowerCase());
+		}
+
+		return itemNameInitialCaps.toString();
+	}
+
+	private ShopResult StoreResult(Shop shop) {
+		ShopResult result = new ShopResult();
+		ItemStack foundItem = shop.getItem();
+		result.ShopOwner = shop.getOwner().getName();
+		result.ItemID = foundItem.getTypeId();
+		result.Data = foundItem.getData().getData();
+
+		if (result.Data > 0)
+			result.ItemName = InitialCaps(foundItem.getType().name()) + " (" + result.ItemID + ":" + result.Data + ")";
+		else
+			result.ItemName = InitialCaps(foundItem.getType().name());
+
+		result.Stock = shop.getRemainingStock();
+		result.Space = shop.getRemainingSpace();
+		result.Price = shop.getPrice();
+
+		return result;
+	}
+
 }
