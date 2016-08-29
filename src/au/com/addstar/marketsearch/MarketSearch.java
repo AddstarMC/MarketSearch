@@ -21,8 +21,10 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -34,6 +36,7 @@ import org.maxgamer.QuickShop.Shop.ShopType;
 
 import au.com.addstar.monolith.lookup.Lookup;
 import au.com.addstar.monolith.lookup.MaterialDefinition;
+import au.com.addstar.monolith.MonoSpawnEgg;
 
 import com.worldcretornica.plotme_core.Plot;
 import com.worldcretornica.plotme_core.PlotMeCoreManager;
@@ -72,6 +75,8 @@ public class MarketSearch extends JavaPlugin {
 		Double Price;
 		Boolean Enchanted = false;
 		Map<Enchantment, Integer> Enchants = null;
+		Boolean SpawnEgg = false;
+		EntityType SpawnType = EntityType.CHICKEN;
 	}
 	
 	@Override
@@ -180,12 +185,13 @@ public class MarketSearch extends JavaPlugin {
 			
 		    for(Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
 		    	Shop shop = inChunk.getValue();
+				ItemStack shopItem = shop.getItem();
 
-		    	if (shop.getItem().getType() != SearchItem.getType()) { continue; }	// Wrong item
+		    	if (shopItem.getType() != SearchItem.getType()) { continue; }	// Wrong item
 
 		    	// Only compare data/durability for items with no real durability (blocks, etc)
 		    	if (SearchItem.getType().getMaxDurability() == 0) {
-		    		if (shop.getItem().getDurability() != SearchItem.getDurability()) { continue; }
+		    		if (shopItem.getDurability() != SearchItem.getDurability()) { continue; }
 		    	}
 
 		    	if (SearchType == ShopType.SELLING && shop.getRemainingStock() == 0) { continue; }	// No stock
@@ -195,10 +201,26 @@ public class MarketSearch extends JavaPlugin {
 		    	ShopResult result = StoreResult(shop);
 
 			    // Is this item enchanted?
-			    if (shop.getItem().getEnchantments().size() > 0) {
-				    result.Enchants = shop.getItem().getEnchantments();
+			    if (shopItem.getEnchantments().size() > 0) {
+				    result.Enchants = shopItem.getEnchantments();
 			    	result.Enchanted = true;
 			    }
+
+				// Is this a spawn egg?
+				if (shopItem.getType() == Material.MONSTER_EGG) {
+					MonoSpawnEgg spawnEgg = new MonoSpawnEgg(shopItem);
+
+					EntityType spawnType;
+					try {
+						spawnType = spawnEgg.getMonoSpawnedType();
+					} catch (Exception e) {
+						e.printStackTrace();
+						spawnType = EntityType.CHICKEN;
+					}
+
+					result.SpawnEgg = true;
+					result.SpawnType = spawnType;
+				}
 
 			    ILocation loc = new BukkitLocation(shop.getLocation());
 			    Plot p = PMCM.getPlotById(PMCM.getPlotId(loc), world);
@@ -379,16 +401,12 @@ public class MarketSearch extends JavaPlugin {
 	
 	public MaterialDefinition getItem(String search)
 	{
-		// Get item value + data value
-		String[] parts = search.split(":");
+		// Split the search term on the colon to obtain the material name and optionally a data value or text filter
+		// The data value could be an integer for item data, or text to filter on
+		// The data value is not required to ber present
+
+		String[] parts = getSearchParts(search);
 		String itemname = parts[0];
-
-		// Auto-change carrot to carrot_item (ID 391) and potato to potato_item (ID 392)
-		if (itemname.equalsIgnoreCase("carrot"))
-			itemname = "CARROT_ITEM";
-
-		if (itemname.equalsIgnoreCase("potato"))
-			itemname = "POTATO_ITEM";
 
 		MaterialDefinition def = getMaterial(itemname);
 		if (def == null) return null;
@@ -397,6 +415,13 @@ public class MarketSearch extends JavaPlugin {
 		if(parts.length > 1) {
 			String dpart = parts[1];
 			try {
+				if (!StringUtils.isNumeric(parts[1])) {
+					// For enchanted tools, the user is allowed to filter for a given enchant
+					// For spawn eggs, the user is allowed to specify the mob name instead of ID
+					// Just return the generic material for now
+					return def;
+				}
+
 				short data = Short.parseShort(dpart);
 				if(data < 0)
 					throw new IllegalArgumentException("Data value for " + itemname + " cannot be less than 0");
@@ -410,6 +435,34 @@ public class MarketSearch extends JavaPlugin {
 		} else {
 			return def;
 		}
+	}
+
+	public String getFilterText(String search) {
+		String[] parts = getSearchParts(search);
+		if (parts.length > 1 && !StringUtils.isNumeric(parts[1])) {
+			// Filter Text is present
+			return parts[1];
+		}
+		return "";
+	}
+
+	private String[] getSearchParts(String search) {
+		// Split on the colon
+		String[] parts = search.split(":");
+		String itemname = parts[0];
+
+		// Auto-change carrot to carrot_item (ID 391) and potato to potato_item (ID 392)
+		if (itemname.equalsIgnoreCase("carrot"))
+			parts[0] = "CARROT_ITEM";
+
+		if (itemname.equalsIgnoreCase("potato"))
+			parts[0] = "POTATO_ITEM";
+
+		// Auto-change spawn_egg to monster_egg
+		if (itemname.equalsIgnoreCase("spawn_egg"))
+			parts[0] = "MONSTER_EGG";
+
+		return parts;
 	}
 
     public MaterialDefinition getMaterial(String name)

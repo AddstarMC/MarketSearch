@@ -1,9 +1,11 @@
 package au.com.addstar.marketsearch;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.base.Strings;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -40,7 +42,14 @@ public class CommandListener implements CommandExecutor {
 			}
 			
 			if (args.length == 1) {
-				sender.sendMessage(ChatColor.RED + "Please specify an item to search for, or 'hand' to search for what you are currently holding (/ms find hand)");
+				sender.sendMessage(ChatColor.GREEN +
+						"Please specify an item to search for, " +
+						"or 'hand' to search for what you are currently holding (/ms find hand)");
+				sender.sendMessage(ChatColor.GREEN +
+						" - filter weapon enchants using /ms find diamond_sword:fire");
+				sender.sendMessage(ChatColor.GREEN +
+						" - filter spawn eggs using /ms find monster_egg:cow");
+
 				return true;
 			}
 			
@@ -86,12 +95,43 @@ public class CommandListener implements CommandExecutor {
 			}
 			
 			if (searchfor != null) {
-				List<ShopResult> results;
+				List<ShopResult> resultsUnfiltered;
 				if (action.equals("SELL")) {
-					results = plugin.SearchMarket(searchfor.asItemStack(1), ShopType.BUYING);
+					resultsUnfiltered = plugin.SearchMarket(searchfor.asItemStack(1), ShopType.BUYING);
 				} else {
-					results = plugin.SearchMarket(searchfor.asItemStack(1), ShopType.SELLING);
+					resultsUnfiltered = plugin.SearchMarket(searchfor.asItemStack(1), ShopType.SELLING);
 				}
+
+				List<ShopResult> results;
+
+				String filterText = plugin.getFilterText(search);
+				if (resultsUnfiltered.size() > 0 && !Strings.isNullOrEmpty(filterText)) {
+
+					// Filter the results to only keep those that contain filterText for either an enchant or a spawn egg type
+					results = new ArrayList<>();
+					filterText = filterText.toLowerCase();
+
+					for (ShopResult result : resultsUnfiltered) {
+
+						if (result.Enchanted) {
+							String ench = plugin.getEnchantText(result.Enchants);
+							if (ench.toLowerCase().contains(filterText)) {
+								results.add(result);
+							}
+						} else {
+							if (result.SpawnEgg) {
+								if (result.SpawnType.toString().toLowerCase().contains(filterText)) {
+									results.add(result);
+								}
+							}
+						}
+
+					}
+				} else {
+					// Do not filter
+					results = resultsUnfiltered;
+				}
+
 
 				int perpage = 10;
 				int pages = (int) Math.ceil((double) results.size() / perpage);
@@ -108,7 +148,7 @@ public class CommandListener implements CommandExecutor {
 
 				if (results.size() > 0) {
 					String ownerstr;
-					String ench;
+					String ench = "";
 					int start = (perpage * (page - 1));
 					int end   = start + perpage - 1;
 					for (int x = start; x <= end; x++) {
@@ -121,7 +161,9 @@ public class CommandListener implements CommandExecutor {
 							ench = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + plugin.getEnchantText(result.Enchants) + ChatColor.DARK_PURPLE + "]";
 							ench = ench.replace("/", ChatColor.DARK_PURPLE + "/" + ChatColor.LIGHT_PURPLE);
 						} else {
-							ench = "";
+							if (result.SpawnEgg) {
+								ench = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + result.SpawnType.toString() + ChatColor.DARK_PURPLE + "]";
+							}
 						}
 
 						String stockdisplay;
