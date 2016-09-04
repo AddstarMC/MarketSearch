@@ -107,7 +107,7 @@ public class CommandListener implements CommandExecutor {
 				String filterText = plugin.getFilterText(search);
 				if (resultsUnfiltered.size() > 0 && !Strings.isNullOrEmpty(filterText)) {
 
-					// Filter the results to only keep those that contain filterText for either an enchant or a spawn egg type
+					// Filter the results to only keep those that contain filterText for an enchant, spawn egg type, or potion type
 					results = new ArrayList<>();
 					filterText = filterText.toLowerCase();
 
@@ -118,12 +118,21 @@ public class CommandListener implements CommandExecutor {
 							if (ench.toLowerCase().contains(filterText)) {
 								results.add(result);
 							}
-						} else {
-							if (result.SpawnEgg) {
-								if (result.SpawnType.toString().toLowerCase().contains(filterText)) {
-									results.add(result);
-								}
+							continue;
+						}
+
+						if (result.SpawnEgg) {
+							if (result.SpawnType.toString().toLowerCase().contains(filterText)) {
+								results.add(result);
 							}
+							continue;
+						}
+
+						if (result.Potion) {
+							if (result.PotionType.toLowerCase().contains(filterText)) {
+								results.add(result);
+							}
+							continue;
 						}
 
 					}
@@ -148,7 +157,7 @@ public class CommandListener implements CommandExecutor {
 
 				if (results.size() > 0) {
 					String ownerstr;
-					String ench = "";
+					String extraInfo = "";
 					int start = (perpage * (page - 1));
 					int end   = start + perpage - 1;
 					for (int x = start; x <= end; x++) {
@@ -158,11 +167,15 @@ public class CommandListener implements CommandExecutor {
 						ownerstr = ChatColor.AQUA + result.PlotOwner;
 						
 						if (result.Enchanted) {
-							ench = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + plugin.getEnchantText(result.Enchants) + ChatColor.DARK_PURPLE + "]";
-							ench = ench.replace("/", ChatColor.DARK_PURPLE + "/" + ChatColor.LIGHT_PURPLE);
+							extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + plugin.getEnchantText(result.Enchants) + ChatColor.DARK_PURPLE + "]";
+							extraInfo = extraInfo.replace("/", ChatColor.DARK_PURPLE + "/" + ChatColor.LIGHT_PURPLE);
 						} else {
 							if (result.SpawnEgg) {
-								ench = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + result.SpawnType.toString() + ChatColor.DARK_PURPLE + "]";
+								extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + result.SpawnType.toString() + ChatColor.DARK_PURPLE + "]";
+							}
+
+							if (result.Potion) {
+								extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + result.PotionType + ChatColor.DARK_PURPLE + "]";
 							}
 						}
 
@@ -176,7 +189,7 @@ public class CommandListener implements CommandExecutor {
 						sender.sendMessage(
 								ChatColor.GREEN + " - " + ownerstr + 
 					    		ChatColor.GREEN + ": " + 
-					    		ChatColor.YELLOW + "$" + result.Price + ench + 
+					    		ChatColor.YELLOW + "$" + result.Price + extraInfo +
 					    		ChatColor.GREEN + " " + stockdisplay);
 					}
 				} else {
