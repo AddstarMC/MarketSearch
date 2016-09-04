@@ -6,12 +6,20 @@
   <name>MarketSearch</name>
 
   <repositories>
-    <!-- For spigot -->
+    <!-- For spigot (old) -->
+    <!--
     <repository>
       <id>md5-repo</id>
       <url>http://repo.md-5.net/content/groups/public/</url>
       <releases><enabled>true</enabled></releases>
       <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+    -->
+
+    <!-- For spigot -->
+    <repository>
+      <id>spigot-repo</id>
+      <url>https://hub.spigotmc.org/nexus/content/groups/public</url>
     </repository>
 
     <!-- For SnakeYAML (contains many other things too) -->
@@ -23,8 +31,8 @@
     
     <!-- For Vault -->
     <repository>
-      <id>theyeticave</id>
-      <url>http://nexus.theyeticave.net/content/repositories/pub_releases/</url>
+      <id>vault-repo</id>
+      <url>http://nexus.hc.to/content/repositories/pub_releases</url>
     </repository>
 
     <!-- Other repositories -->
@@ -54,17 +62,24 @@
   </repositories>
 
   <dependencies>
-    <dependency>
-      <groupId>org.spigotmc</groupId>
-      <artifactId>spigot</artifactId>
-      <version>1.9-R0.1-SNAPSHOT</version>
-    </dependency>
-    
+      <dependency>
+          <groupId>org.spigotmc</groupId>
+          <artifactId>spigot</artifactId>
+          <version>1.10-R0.1-SNAPSHOT</version>
+          <exclusions>
+              <exclusion>
+                  <groupId>org.spigotmc</groupId>
+                  <artifactId>sneaky-throw</artifactId>
+              </exclusion>
+          </exclusions>
+      </dependency>
+
     <!-- Used for economy stuff -->
     <dependency>
       <groupId>net.milkbowl.vault</groupId>
-      <artifactId>Vault</artifactId>
-      <version>1.4.1</version>
+      <artifactId>VaultAPI</artifactId>
+      <version>1.6</version>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>
