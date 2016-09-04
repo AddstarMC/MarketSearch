@@ -24,7 +24,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -34,6 +34,7 @@ import org.maxgamer.QuickShop.Shop.ShopChunk;
 import org.maxgamer.QuickShop.Shop.ShopManager;
 import org.maxgamer.QuickShop.Shop.ShopType;
 
+import au.com.addstar.marketsearch.PotionInfo.PotionType;
 import au.com.addstar.monolith.lookup.Lookup;
 import au.com.addstar.monolith.lookup.MaterialDefinition;
 import au.com.addstar.monolith.MonoSpawnEgg;
@@ -75,6 +76,8 @@ public class MarketSearch extends JavaPlugin {
 		Double Price;
 		Boolean Enchanted = false;
 		Map<Enchantment, Integer> Enchants = null;
+		Boolean Potion = false;
+		String PotionType = null;
 		Boolean SpawnEgg = false;
 		EntityType SpawnType = EntityType.CHICKEN;
 	}
@@ -222,6 +225,33 @@ public class MarketSearch extends JavaPlugin {
 					result.SpawnType = spawnType;
 				}
 
+				// Is this an enchanted book?
+				if (shopItem.getType() == Material.ENCHANTED_BOOK) {
+
+					EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta)shopItem.getItemMeta();
+
+					if (bookMeta.hasStoredEnchants()) {
+						// Store the enchantment(s)
+						result.Enchanted = true;
+						result.Enchants = bookMeta.getStoredEnchants();
+					} else {
+						if (DebugEnabled) {
+							logger.info("No stored enchants on book");
+						}
+					}
+				}
+
+				// Is this a potion?
+				if (shopItem.getType() == Material.POTION ||
+					shopItem.getType() == Material.SPLASH_POTION ||
+					shopItem.getType() == Material.LINGERING_POTION) {
+
+					PotionInfo potion = PotionInfo.fromItemStack(shopItem);
+
+					result.Potion = true;
+					result.PotionType = potion.toString();
+				}
+
 			    ILocation loc = new BukkitLocation(shop.getLocation());
 			    Plot p = PMCM.getPlotById(PMCM.getPlotId(loc), world);
 			    if (p != null) {
@@ -290,28 +320,33 @@ public class MarketSearch extends JavaPlugin {
 	
 	private void LoadEnchants() {
         EnchantMap.clear();
-        EnchantMap.put(Enchantment.ARROW_DAMAGE, "dmg");
-        EnchantMap.put(Enchantment.ARROW_FIRE, "fire");
-        EnchantMap.put(Enchantment.ARROW_INFINITE, "inf");
-        EnchantMap.put(Enchantment.ARROW_KNOCKBACK, "knock");
-        EnchantMap.put(Enchantment.DAMAGE_ALL, "dmg");
-        EnchantMap.put(Enchantment.DAMAGE_ARTHROPODS, "bane");
-        EnchantMap.put(Enchantment.DAMAGE_UNDEAD, "smite");
-        EnchantMap.put(Enchantment.DIG_SPEED, "eff");
-        EnchantMap.put(Enchantment.DURABILITY, "dura");
-        EnchantMap.put(Enchantment.FIRE_ASPECT, "fire");
-        EnchantMap.put(Enchantment.KNOCKBACK, "knock");
-        EnchantMap.put(Enchantment.LOOT_BONUS_BLOCKS, "fort");
-        EnchantMap.put(Enchantment.LOOT_BONUS_MOBS, "fort");
-        EnchantMap.put(Enchantment.OXYGEN, "air");
-        EnchantMap.put(Enchantment.PROTECTION_ENVIRONMENTAL, "prot");
-        EnchantMap.put(Enchantment.PROTECTION_EXPLOSIONS, "blast");
-        EnchantMap.put(Enchantment.PROTECTION_FALL, "fall");
-        EnchantMap.put(Enchantment.PROTECTION_PROJECTILE, "proj");
-        EnchantMap.put(Enchantment.PROTECTION_FIRE, "fireprot");
-        EnchantMap.put(Enchantment.SILK_TOUCH, "silk");
-        EnchantMap.put(Enchantment.THORNS, "thorn");
-        EnchantMap.put(Enchantment.WATER_WORKER, "aqua");
+		EnchantMap.put(Enchantment.ARROW_DAMAGE, "dmg");
+		EnchantMap.put(Enchantment.ARROW_FIRE, "fire");
+		EnchantMap.put(Enchantment.ARROW_INFINITE, "inf");
+		EnchantMap.put(Enchantment.ARROW_KNOCKBACK, "knock");
+		EnchantMap.put(Enchantment.DAMAGE_ALL, "dmg");
+		EnchantMap.put(Enchantment.DAMAGE_ARTHROPODS, "bane");
+		EnchantMap.put(Enchantment.DAMAGE_UNDEAD, "smite");
+		EnchantMap.put(Enchantment.DEPTH_STRIDER, "strider");
+		EnchantMap.put(Enchantment.DIG_SPEED, "eff");
+		EnchantMap.put(Enchantment.DURABILITY, "dura");
+		EnchantMap.put(Enchantment.FIRE_ASPECT, "fire");
+		EnchantMap.put(Enchantment.FROST_WALKER, "frost");
+		EnchantMap.put(Enchantment.KNOCKBACK, "knock");
+		EnchantMap.put(Enchantment.LOOT_BONUS_BLOCKS, "fort");
+		EnchantMap.put(Enchantment.LOOT_BONUS_MOBS, "fort");
+		EnchantMap.put(Enchantment.LUCK, "luck");
+		EnchantMap.put(Enchantment.LURE, "lure");
+		EnchantMap.put(Enchantment.MENDING, "mend");
+		EnchantMap.put(Enchantment.OXYGEN, "air");
+		EnchantMap.put(Enchantment.PROTECTION_ENVIRONMENTAL, "prot");
+		EnchantMap.put(Enchantment.PROTECTION_EXPLOSIONS, "blast");
+		EnchantMap.put(Enchantment.PROTECTION_FALL, "fall");
+		EnchantMap.put(Enchantment.PROTECTION_FIRE, "fireprot");
+		EnchantMap.put(Enchantment.PROTECTION_PROJECTILE, "proj");
+		EnchantMap.put(Enchantment.SILK_TOUCH, "silk");
+		EnchantMap.put(Enchantment.THORNS, "thorn");
+		EnchantMap.put(Enchantment.WATER_WORKER, "aqua");
 	}
 	
 	public void Log(String data) {
@@ -461,6 +496,15 @@ public class MarketSearch extends JavaPlugin {
 		// Auto-change spawn_egg to monster_egg
 		if (itemname.equalsIgnoreCase("spawn_egg"))
 			parts[0] = "MONSTER_EGG";
+
+		// Auto-change some potion search terms
+		// Splash potion
+		if (itemname.contains("splash"))
+			parts[0] = "438";
+
+		// Lingering potion
+		if (itemname.contains("linger"))
+			parts[0] = "441";
 
 		return parts;
 	}
