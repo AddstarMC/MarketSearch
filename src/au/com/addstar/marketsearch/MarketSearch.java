@@ -25,6 +25,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
+import org.bukkit.material.MaterialData;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -34,10 +35,10 @@ import org.maxgamer.QuickShop.Shop.ShopChunk;
 import org.maxgamer.QuickShop.Shop.ShopManager;
 import org.maxgamer.QuickShop.Shop.ShopType;
 
-import au.com.addstar.marketsearch.PotionInfo.PotionType;
 import au.com.addstar.monolith.lookup.Lookup;
 import au.com.addstar.monolith.lookup.MaterialDefinition;
 import au.com.addstar.monolith.MonoSpawnEgg;
+import au.com.addstar.monolith.util.PotionUtil;
 
 import com.worldcretornica.plotme_core.Plot;
 import com.worldcretornica.plotme_core.PlotMeCoreManager;
@@ -246,8 +247,7 @@ public class MarketSearch extends JavaPlugin {
 					shopItem.getType() == Material.SPLASH_POTION ||
 					shopItem.getType() == Material.LINGERING_POTION) {
 
-					PotionInfo potion = PotionInfo.fromItemStack(shopItem);
-
+					PotionUtil potion = PotionUtil.fromItemStack(shopItem);
 					result.Potion = true;
 					result.PotionType = potion.toString();
 				}

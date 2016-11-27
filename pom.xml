@@ -2,45 +2,51 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>MarketSearch</groupId>
   <artifactId>MarketSearch</artifactId>
-  <version>1.3-b${env.BUILD_NUMBER}</version>
+  <version>1.4-SNAPSHOT</version>
   <name>MarketSearch</name>
-
+    <properties>
+        <build.number />
+        <plugin.version>${project.version}-${build.number}</plugin.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+    <scm>
+        <connection>scm:git:git@github.com:AddstarMC/MarketSearch.git</connection>
+        <developerConnection>scm:git:git@github.com:AddstarMC/MarketSearch.git</developerConnection>
+        <url>https://github.com/AddstarMC/MarketSearch</url>
+        <tag>HEAD</tag>
+    </scm>
+    <developers>
+        <developer>
+            <id>AddstarMC</id>
+            <name>AddstarMC</name>
+            <url>http://github.com/AddstarMC</url>
+            <roles>
+                <role>developer</role>
+                <role>maintainer</role>
+            </roles>
+            <timezone>10</timezone>
+        </developer>
+    </developers>
+    <distributionManagement>
+        <repository>
+            <id>maven.addstar.com.au</id>
+            <name>maven.addstar.com.au-releases</name>
+            <url>http://maven.addstar.com.au/artifactory/ext-release-local</url>
+        </repository>
+        <snapshotRepository>
+            <id>maven.addstar.com.au</id>
+            <name>maven.addstar.com.au-snapshots</name>
+            <url>http://maven.addstar.com.au/artifactory/ext-snapshot-local</url>
+        </snapshotRepository>
+    </distributionManagement>
   <repositories>
-    <!-- For spigot (old) -->
-    <!--
-    <repository>
-      <id>md5-repo</id>
-      <url>http://repo.md-5.net/content/groups/public/</url>
-      <releases><enabled>true</enabled></releases>
-      <snapshots><enabled>true</enabled></snapshots>
-    </repository>
-    -->
 
-    <!-- For spigot -->
-    <repository>
-      <id>spigot-repo</id>
-      <url>https://hub.spigotmc.org/nexus/content/groups/public</url>
-    </repository>
-
-    <!-- For SnakeYAML (contains many other things too) -->
-    <repository>
-      <id>Sonatype-public</id>
-      <name>SnakeYAML repository</name>
-      <url>http://oss.sonatype.org/content/groups/public/</url>
-    </repository>
-    
-    <!-- For Vault -->
+      <!-- For Vault -->
     <repository>
       <id>vault-repo</id>
       <url>http://nexus.hc.to/content/repositories/pub_releases</url>
     </repository>
 
-    <!-- Other repositories -->
-    <repository>
-      <id>maven-central</id>
-      <url>http://repo1.maven.org/maven2/</url>
-    </repository>
-    
     <!-- Addstar repos -->
     <repository>
         <id>addstar-repo</id>
@@ -59,21 +65,20 @@
             <enabled>false</enabled>
         </releases>
     </repository>
+      <!-- Other repositories -->
+      <repository>
+          <id>maven-central</id>
+          <url>http://repo1.maven.org/maven2/</url>
+      </repository>
   </repositories>
 
   <dependencies>
       <dependency>
           <groupId>org.spigotmc</groupId>
-          <artifactId>spigot</artifactId>
-          <version>1.10-R0.1-SNAPSHOT</version>
-          <exclusions>
-              <exclusion>
-                  <groupId>org.spigotmc</groupId>
-                  <artifactId>sneaky-throw</artifactId>
-              </exclusion>
-          </exclusions>
+          <artifactId>spigot-api</artifactId>
+          <version>1.11-R0.1-SNAPSHOT</version>
+          <scope>provided</scope>
       </dependency>
-
     <!-- Used for economy stuff -->
     <dependency>
       <groupId>net.milkbowl.vault</groupId>
@@ -85,44 +90,45 @@
     <dependency>
       <groupId>au.com.addstar</groupId>
       <artifactId>quickshop</artifactId>
-      <version>4.6</version>
+      <version>4.7</version>
+        <scope>provided</scope>
     </dependency>
 
     <dependency>
         <groupId>au.com.addstar</groupId>
         <artifactId>Monolith</artifactId>
         <version>1.4.4-SNAPSHOT</version>
+        <scope>provided</scope>
     </dependency>
 
     <dependency>
         <groupId>com.worldcretornica</groupId>
         <artifactId>PlotMe-Core</artifactId>
         <version>0.16-SNAPSHOT</version>
+        <scope>provided</scope>
     </dependency>
   </dependencies>
 
   <build>
+      <sourceDirectory>src</sourceDirectory>
     <resources>
       <resource>
         <targetPath>.</targetPath>
         <filtering>true</filtering>
-        <directory>${basedir}/</directory>
+        <directory>${basedir}/src/resources</directory>
         <includes>
-          <include>config.yml</include>
           <include>plugin.yml</include>
         </includes>
       </resource>
     </resources>
-
-    <sourceDirectory>src</sourceDirectory>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>2.3.2</version>
         <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
+          <source>1.8</source>
+          <target>1.8</target>
         </configuration>
       </plugin>
     </plugins>
