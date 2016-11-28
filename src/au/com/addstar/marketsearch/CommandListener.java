@@ -333,8 +333,9 @@ public class CommandListener implements CommandExecutor {
 				} else {
 					plugin.setDebugEnabled(true);
 				}
-
-		default:
+				sender.sendMessage(ChatColor.RED + "MS Debug is "+ plugin.isDebugEnabled());
+				break;
+			default:
 			plugin.SendHelp(sender);
 			break;
 		}
