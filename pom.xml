@@ -90,7 +90,7 @@
     <dependency>
       <groupId>au.com.addstar</groupId>
       <artifactId>quickshop</artifactId>
-      <version>4.7</version>
+      <version>4.8-SNAPSHOT</version>
         <scope>provided</scope>
     </dependency>
 

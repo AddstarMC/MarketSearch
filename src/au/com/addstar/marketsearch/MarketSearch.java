@@ -25,7 +25,6 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
-import org.bukkit.material.MaterialData;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -55,6 +54,15 @@ public class MarketSearch extends JavaPlugin {
 	public static Permission perms = null;
 	public static Chat chat = null;
 	public boolean VaultEnabled = false;
+
+	public boolean isDebugEnabled() {
+		return DebugEnabled;
+	}
+
+	public void setDebugEnabled(boolean debugEnabled) {
+		DebugEnabled = debugEnabled;
+	}
+
 	public boolean DebugEnabled = false;
 	public String MarketWorld = null;
 	public ShopManager QSSM = null;
@@ -184,83 +192,97 @@ public class MarketSearch extends JavaPlugin {
 	    IWorld world = new BukkitWorld(Bukkit.getWorld(MarketWorld));
 	    PlotMeCoreManager PMCM = PlotMeCoreManager.getInstance();
 	    List<ShopResult> results = new ArrayList<>();
+		HashMap<ShopChunk, HashMap<Location, Shop>> map = QSSM.getShops(MarketWorld);
+		if (map !=null) {
+			for (Entry<ShopChunk, HashMap<Location, Shop>> chunks : map.entrySet()) {
 
-		for(Entry<ShopChunk, HashMap<Location, Shop>> chunks : QSSM.getShops(MarketWorld).entrySet()) {
-			
-		    for(Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
-		    	Shop shop = inChunk.getValue();
-				ItemStack shopItem = shop.getItem();
+				for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
+					Shop shop = inChunk.getValue();
+					ItemStack shopItem = shop.getItem();
 
-		    	if (shopItem.getType() != SearchItem.getType()) { continue; }	// Wrong item
+					if (shopItem.getType() != SearchItem.getType()) {
+						continue;
+					}    // Wrong item
 
-		    	// Only compare data/durability for items with no real durability (blocks, etc)
-		    	if (SearchItem.getType().getMaxDurability() == 0) {
-		    		if (shopItem.getDurability() != SearchItem.getDurability()) { continue; }
-		    	}
-
-		    	if (SearchType == ShopType.SELLING && shop.getRemainingStock() == 0) { continue; }	// No stock
-		    	if (SearchType == ShopType.BUYING && shop.getRemainingSpace() == 0) { continue; }	// No space
-		    	if (shop.getShopType() != SearchType) { continue; }									// Wrong shop type
-		    	
-		    	ShopResult result = StoreResult(shop);
-
-			    // Is this item enchanted?
-			    if (shopItem.getEnchantments().size() > 0) {
-				    result.Enchants = shopItem.getEnchantments();
-			    	result.Enchanted = true;
-			    }
-
-				// Is this a spawn egg?
-				if (shopItem.getType() == Material.MONSTER_EGG) {
-					MonoSpawnEgg spawnEgg = new MonoSpawnEgg(shopItem);
-
-					EntityType spawnType;
-					try {
-						spawnType = spawnEgg.getMonoSpawnedType();
-					} catch (Exception e) {
-						e.printStackTrace();
-						spawnType = EntityType.CHICKEN;
-					}
-
-					result.SpawnEgg = true;
-					result.SpawnType = spawnType;
-				}
-
-				// Is this an enchanted book?
-				if (shopItem.getType() == Material.ENCHANTED_BOOK) {
-
-					EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta)shopItem.getItemMeta();
-
-					if (bookMeta.hasStoredEnchants()) {
-						// Store the enchantment(s)
-						result.Enchanted = true;
-						result.Enchants = bookMeta.getStoredEnchants();
-					} else {
-						if (DebugEnabled) {
-							logger.info("No stored enchants on book");
+					// Only compare data/durability for items with no real durability (blocks, etc)
+					if (SearchItem.getType().getMaxDurability() == 0) {
+						if (shopItem.getDurability() != SearchItem.getDurability()) {
+							continue;
 						}
 					}
+
+					if (SearchType == ShopType.SELLING && shop.getRemainingStock() == 0) {
+						continue;
+					}    // No stock
+					if (SearchType == ShopType.BUYING && shop.getRemainingSpace() == 0) {
+						continue;
+					}    // No space
+					if (shop.getShopType() != SearchType) {
+						continue;
+					}                                    // Wrong shop type
+
+					ShopResult result = StoreResult(shop);
+
+					// Is this item enchanted?
+					if (shopItem.getEnchantments().size() > 0) {
+						result.Enchants = shopItem.getEnchantments();
+						result.Enchanted = true;
+					}
+
+					// Is this a spawn egg?
+					if (shopItem.getType() == Material.MONSTER_EGG) {
+						MonoSpawnEgg spawnEgg = new MonoSpawnEgg(shopItem);
+
+						EntityType spawnType;
+						try {
+							spawnType = spawnEgg.getMonoSpawnedType();
+						} catch (Exception e) {
+							e.printStackTrace();
+							spawnType = EntityType.CHICKEN;
+						}
+
+						result.SpawnEgg = true;
+						result.SpawnType = spawnType;
+					}
+
+					// Is this an enchanted book?
+					if (shopItem.getType() == Material.ENCHANTED_BOOK) {
+
+						EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta) shopItem.getItemMeta();
+
+						if (bookMeta.hasStoredEnchants()) {
+							// Store the enchantment(s)
+							result.Enchanted = true;
+							result.Enchants = bookMeta.getStoredEnchants();
+						} else {
+							if (DebugEnabled) {
+								logger.info("No stored enchants on book");
+							}
+						}
+					}
+
+					// Is this a potion?
+					if (shopItem.getType() == Material.POTION ||
+							shopItem.getType() == Material.SPLASH_POTION ||
+							shopItem.getType() == Material.LINGERING_POTION) {
+
+						PotionUtil potion = PotionUtil.fromItemStack(shopItem);
+						result.Potion = true;
+						result.PotionType = potion.toString();
+					}
+
+					ILocation loc = new BukkitLocation(shop.getLocation());
+					Plot p = PMCM.getPlotById(PMCM.getPlotId(loc), world);
+					if (p != null) {
+						result.PlotOwner = p.getOwner();
+						results.add(result);
+					} else {
+						Warn("Unable to find plot! " + shop.getLocation().toString());
+					}
 				}
-
-				// Is this a potion?
-				if (shopItem.getType() == Material.POTION ||
-					shopItem.getType() == Material.SPLASH_POTION ||
-					shopItem.getType() == Material.LINGERING_POTION) {
-
-					PotionUtil potion = PotionUtil.fromItemStack(shopItem);
-					result.Potion = true;
-					result.PotionType = potion.toString();
-				}
-
-			    ILocation loc = new BukkitLocation(shop.getLocation());
-			    Plot p = PMCM.getPlotById(PMCM.getPlotId(loc), world);
-			    if (p != null) {
-			    	result.PlotOwner = p.getOwner();
-			    	results.add(result);
-			    } else {
-			    	Warn("Unable to find plot! " + shop.getLocation().toString());
-			    }
-		    }
+			}
+		}else{
+			Warn("Quickshop returned NO Shops");
 		}
 
 		if (DebugEnabled) {
@@ -280,24 +302,30 @@ public class MarketSearch extends JavaPlugin {
 	    IWorld world = new BukkitWorld(Bukkit.getWorld(MarketWorld));
 	    PlotMeCoreManager PMCM = PlotMeCoreManager.getInstance();
 		List<ShopResult> results = new ArrayList<>();
-		for(Entry<ShopChunk, HashMap<Location, Shop>> chunks : QSSM.getShops(MarketWorld).entrySet()) {
-			
-		    for(Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
-		    	Shop shop = inChunk.getValue();
-		    	if (shop.getOwner().getName().equalsIgnoreCase(player)) {
+		HashMap<ShopChunk, HashMap<Location, Shop>> map = QSSM.getShops(MarketWorld);
+		if (map !=null) {
+			for (Entry<ShopChunk, HashMap<Location, Shop>> chunks : QSSM.getShops(MarketWorld).entrySet()) {
 
-					ShopResult result = StoreResult(shop);
+				for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
+					Shop shop = inChunk.getValue();
+					if (shop.getOwner().getName().equalsIgnoreCase(player)) {
 
-				    ILocation loc = new BukkitLocation(shop.getLocation());
-				    Plot p = PMCM.getPlotById(PMCM.getPlotId(loc), world);
-				    if (p != null) {
-				    	result.PlotOwner = p.getOwner();
-				    	results.add(result);
-				    } else {
-				    	Warn("Unable to find plot! " + shop.getLocation().toString());
-				    }
-		    	}
-		    }
+						ShopResult result = StoreResult(shop);
+
+						ILocation loc = new BukkitLocation(shop.getLocation());
+						Plot p = PMCM.getPlotById(PMCM.getPlotId(loc), world);
+						if (p != null) {
+							result.PlotOwner = p.getOwner();
+							results.add(result);
+						} else {
+							Warn("Unable to find plot! " + shop.getLocation().toString());
+						}
+					}
+				}
+			}
+		}else{
+			Warn("Quickshop returned NO Shops");
+
 		}
 		return results;
 	}
@@ -431,6 +459,9 @@ public class MarketSearch extends JavaPlugin {
 			sender.sendMessage(ChatColor.AQUA + "/ms pstock <player> :" + ChatColor.WHITE + " Get another player's stock levels");
 			sender.sendMessage(ChatColor.AQUA + "/ms pstock <player> empty :" + ChatColor.WHITE + " Other player's shops with NO stock");
 			sender.sendMessage(ChatColor.AQUA + "/ms pstock <player> lowest :" + ChatColor.WHITE + " Other player's shops with lowest stock");
+		}
+		if(!(sender instanceof Player) || (HasPermission((Player) sender, "marketsearch.debug"))) {
+			sender.sendMessage(ChatColor.AQUA + "/ms debug :" + ChatColor.WHITE + " Switch debugging on and off as a toggle");
 		}
 	}
 	
