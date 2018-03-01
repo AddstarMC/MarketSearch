@@ -18,8 +18,8 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SpawnEggMeta;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -171,7 +171,11 @@ class MarketSearch extends JavaPlugin {
 	public List<ShopResult> SearchMarket(ItemStack SearchItem, ShopType SearchType) {
 		List<ShopResult> results = new ArrayList<>();
 		HashMap<ShopChunk, HashMap<Location, Shop>> map = QSSM.getShops(MarketWorld);
-		if (map != null) {
+
+		int eggDebugMessageCount = 0;
+		int eggDebugMessageLimit = 3;
+
+		if (map !=null) {
 			for (Entry<ShopChunk, HashMap<Location, Shop>> chunks : map.entrySet()) {
 
 				for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
@@ -209,11 +213,69 @@ class MarketSearch extends JavaPlugin {
 
 					// Is this a spawn egg?
 					if (shopItem.getType() == Material.MONSTER_EGG) {
-						if (shopItem.getItemMeta() instanceof SpawnEggMeta) {
-							SpawnEggMeta meta = (SpawnEggMeta) shopItem.getItemMeta();
-							result.SpawnType = meta.getSpawnedType();
-							result.SpawnEgg = true;
+
+						ItemMeta itemMeta = shopItem.getItemMeta();
+						SpawnEggMeta eggMeta = null;
+
+						boolean showDebugForEgg = (DebugEnabled && eggDebugMessageCount <= eggDebugMessageLimit);
+
+						if (showDebugForEgg) {
+							logger.info("Retrieve SpawnEggMeta for " + shopItem.toString());
+							logger.info("TryCast " + itemMeta.toString());
 						}
+
+						try {
+							eggMeta = (SpawnEggMeta) itemMeta;
+						} catch (ClassCastException e) {
+							e.printStackTrace();
+						}
+
+						EntityType eggSpawnType;
+						String eggName;
+
+						if (showDebugForEgg) {
+							if (eggMeta == null)
+								logger.info("Cast (SpawnEggMeta) itemMeta returned null");
+							else
+								logger.info("Determine entity type using " + eggMeta);
+						}
+
+						try {
+							eggSpawnType = eggMeta.getSpawnedType();
+						} catch (Exception e) {
+							e.printStackTrace();
+							eggSpawnType = EntityType.CHICKEN;
+						}
+
+						if (showDebugForEgg) {
+							if (eggSpawnType == null)
+								logger.info("eggMeta.getSpawnedType() returned null");
+							else
+								logger.info("EggSpawnType is " + eggSpawnType);
+						}
+
+						if (showDebugForEgg) {
+							logger.info("Retrieve egg type name");
+						}
+
+						try {
+							eggName = eggMeta.getDisplayName();
+						} catch (Exception e) {
+							e.printStackTrace();
+							eggName = "Undefined";
+						}
+
+						if (showDebugForEgg) {
+							if (eggName == null)
+								logger.info("eggMeta.getDisplayName() returned null");
+							else
+								logger.info("eggName is: " + eggName);
+						}
+
+						result.SpawnEgg = true;
+						result.SpawnType = eggSpawnType;
+
+						eggDebugMessageCount++;
 					}
 
 						// Is this an enchanted book?

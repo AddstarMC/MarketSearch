@@ -115,21 +115,21 @@ class CommandListener implements CommandExecutor {
 
 							if (result.Enchanted) {
 								String ench = plugin.getEnchantText(result.Enchants);
-								if (ench.toLowerCase().contains(filterText)) {
+								if (ench == null || ench.toLowerCase().contains(filterText)) {
 									results.add(result);
 								}
 								continue;
 							}
 
 							if (result.SpawnEgg) {
-								if (result.SpawnType.toString().toLowerCase().contains(filterText)) {
+								if (result.SpawnType == null || result.SpawnType.toString().toLowerCase().contains(filterText)) {
 									results.add(result);
 								}
 								continue;
 							}
 
 							if (result.Potion) {
-								if (result.PotionType.toLowerCase().contains(filterText)) {
+								if (result.PotionType == null || result.PotionType.toLowerCase().contains(filterText)) {
 									results.add(result);
 								}
 							}
@@ -166,15 +166,27 @@ class CommandListener implements CommandExecutor {
 							ownerstr = ChatColor.AQUA + result.PlotOwner;
 
 							if (result.Enchanted) {
-								extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + plugin.getEnchantText(result.Enchants) + ChatColor.DARK_PURPLE + "]";
+								String enchantType = "??UnknownType??";
+								if (result.Enchants != null) {
+									enchantType = plugin.getEnchantText(result.Enchants);
+								}
+								extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + enchantType + ChatColor.DARK_PURPLE + "]";
 								extraInfo = extraInfo.replace("/", ChatColor.DARK_PURPLE + "/" + ChatColor.LIGHT_PURPLE);
 							} else {
 								if (result.SpawnEgg) {
-									extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + result.SpawnType.toString() + ChatColor.DARK_PURPLE + "]";
+									String spawnType = "??UnknownMob??";
+									if (result.SpawnType != null) {
+										spawnType = result.SpawnType.toString();
+									}
+									extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + spawnType + ChatColor.DARK_PURPLE + "]";
 								}
 
 								if (result.Potion) {
-									extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + result.PotionType + ChatColor.DARK_PURPLE + "]";
+									String potionType = "??UnknownPotion??";
+									if (result.PotionType != null) {
+										potionType = result.PotionType;
+									}
+									extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + potionType + ChatColor.DARK_PURPLE + "]";
 								}
 							}
 
