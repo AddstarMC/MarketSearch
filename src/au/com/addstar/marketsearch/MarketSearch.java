@@ -6,8 +6,8 @@ import java.util.logging.Logger;
 
 import au.com.addstar.marketsearch.PlotProviders.PlotMePlotProvider;
 import au.com.addstar.marketsearch.PlotProviders.PlotProvider;
-
 import au.com.addstar.marketsearch.PlotProviders.PlotSquaredPlotProvider;
+
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -20,6 +20,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SpawnEggMeta;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
