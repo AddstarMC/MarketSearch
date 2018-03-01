@@ -2,10 +2,10 @@ name: MarketSearch
 main: au.com.addstar.marketsearch.MarketSearch
 version: ${plugin.version}
 author: add5tar
-softdepend: [Essentials, Vault, Multiverse-Core, My Worlds, QuickShop, PlotMe]
-website: http://dev.bukkit.org/server-mods/marketsearch/
-dev-url: http://dev.bukkit.org/server-mods/marketsearch/
-description: A set of helper commands to assist with QuickShop/PlotMe market worlds
+softdepend: [Multiverse-Core, My Worlds, QuickShop, PlotMe, PlotSquared]
+website:  ${project.url}
+dev-url: ${project.url}
+description: ${project.description}
 
 commands:
   marketsearch:

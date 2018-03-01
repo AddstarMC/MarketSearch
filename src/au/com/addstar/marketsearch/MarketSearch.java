@@ -10,12 +10,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 
-import net.milkbowl.vault.chat.Chat;
-import net.milkbowl.vault.economy.Economy;
-import net.milkbowl.vault.permission.Permission;
+import au.com.addstar.marketsearch.PlotProviders.PlotMePlotProvider;
+import au.com.addstar.marketsearch.PlotProviders.PlotProvider;
 
+import au.com.addstar.marketsearch.PlotProviders.PlotSquaredPlotProvider;
 import org.apache.commons.lang.StringUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -25,6 +24,8 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
+import org.bukkit.inventory.meta.SpawnEggMeta;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -36,24 +37,9 @@ import org.maxgamer.QuickShop.Shop.ShopType;
 
 import au.com.addstar.monolith.lookup.Lookup;
 import au.com.addstar.monolith.lookup.MaterialDefinition;
-import au.com.addstar.monolith.MonoSpawnEgg;
 import au.com.addstar.monolith.util.PotionUtil;
 
-import com.worldcretornica.plotme_core.Plot;
-import com.worldcretornica.plotme_core.PlotMeCoreManager;
-import com.worldcretornica.plotme_core.api.ILocation;
-import com.worldcretornica.plotme_core.api.IWorld;
-import com.worldcretornica.plotme_core.bukkit.PlotMe_CorePlugin;
-import com.worldcretornica.plotme_core.bukkit.api.BukkitLocation;
-import com.worldcretornica.plotme_core.bukkit.api.BukkitWorld;
-
 public class MarketSearch extends JavaPlugin {
-	public static MarketSearch instance;
-	
-	public static Economy econ = null;
-	public static Permission perms = null;
-	public static Chat chat = null;
-	public boolean VaultEnabled = false;
 
 	public boolean isDebugEnabled() {
 		return DebugEnabled;
@@ -66,7 +52,7 @@ public class MarketSearch extends JavaPlugin {
 	public boolean DebugEnabled = false;
 	public String MarketWorld = null;
 	public ShopManager QSSM = null;
-	public PlotMe_CorePlugin PlotMePlugin = null;
+	public PlotProvider plotProvider;
 	public Map<Enchantment, String> EnchantMap = new HashMap<>();
 	
 	private static final Logger logger = Logger.getLogger("Minecraft");
@@ -97,7 +83,17 @@ public class MarketSearch extends JavaPlugin {
 		pdfFile = this.getDescription();
 		pm = this.getServer().getPluginManager();
 		QSSM = QuickShop.instance.getShopManager();
-		PlotMePlugin = (PlotMe_CorePlugin) pm.getPlugin("PlotMe");
+
+		if(pm.getPlugin("PlotMe") != null){
+			JavaPlugin plugin = (JavaPlugin) pm.getPlugin("PlotMe");
+			plotProvider = new PlotMePlotProvider(plugin);
+		}
+		if(pm.getPlugin("PlotSquared") != null){
+            Plugin plotsquared = pm.getPlugin("PlotSquared");
+            if(plotsquared != null && plotsquared.isEnabled()){
+                plotProvider = new PlotSquaredPlotProvider();
+            }
+        }
 		LoadEnchants();
 		
 		MarketWorld = "market";
@@ -189,11 +185,9 @@ public class MarketSearch extends JavaPlugin {
 	}
 
 	public List<ShopResult> SearchMarket(ItemStack SearchItem, ShopType SearchType) {
-	    IWorld world = new BukkitWorld(Bukkit.getWorld(MarketWorld));
-	    PlotMeCoreManager PMCM = PlotMeCoreManager.getInstance();
-	    List<ShopResult> results = new ArrayList<>();
+		List<ShopResult> results = new ArrayList<>();
 		HashMap<ShopChunk, HashMap<Location, Shop>> map = QSSM.getShops(MarketWorld);
-		if (map !=null) {
+		if (map != null) {
 			for (Entry<ShopChunk, HashMap<Location, Shop>> chunks : map.entrySet()) {
 
 				for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
@@ -231,76 +225,67 @@ public class MarketSearch extends JavaPlugin {
 
 					// Is this a spawn egg?
 					if (shopItem.getType() == Material.MONSTER_EGG) {
-						MonoSpawnEgg spawnEgg = new MonoSpawnEgg(shopItem);
-
-						EntityType spawnType;
-						try {
-							spawnType = spawnEgg.getMonoSpawnedType();
-						} catch (Exception e) {
-							e.printStackTrace();
-							spawnType = EntityType.CHICKEN;
+						if (shopItem.getItemMeta() instanceof SpawnEggMeta) {
+							SpawnEggMeta meta = (SpawnEggMeta) shopItem.getItemMeta();
+							result.SpawnType = meta.getSpawnedType();
+							result.SpawnEgg = true;
 						}
-
-						result.SpawnEgg = true;
-						result.SpawnType = spawnType;
 					}
 
-					// Is this an enchanted book?
-					if (shopItem.getType() == Material.ENCHANTED_BOOK) {
+						// Is this an enchanted book?
+						if (shopItem.getType() == Material.ENCHANTED_BOOK) {
 
-						EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta) shopItem.getItemMeta();
+							EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta) shopItem.getItemMeta();
 
-						if (bookMeta.hasStoredEnchants()) {
-							// Store the enchantment(s)
-							result.Enchanted = true;
-							result.Enchants = bookMeta.getStoredEnchants();
-						} else {
-							if (DebugEnabled) {
-								logger.info("No stored enchants on book");
+							if (bookMeta.hasStoredEnchants()) {
+								// Store the enchantment(s)
+								result.Enchanted = true;
+								result.Enchants = bookMeta.getStoredEnchants();
+							} else {
+								if (DebugEnabled) {
+									logger.info("No stored enchants on book");
+								}
 							}
 						}
-					}
 
-					// Is this a potion?
-					if (shopItem.getType() == Material.POTION ||
-							shopItem.getType() == Material.SPLASH_POTION ||
-							shopItem.getType() == Material.LINGERING_POTION) {
+						// Is this a potion?
+						if (shopItem.getType() == Material.POTION ||
+								shopItem.getType() == Material.SPLASH_POTION ||
+								shopItem.getType() == Material.LINGERING_POTION) {
 
-						PotionUtil potion = PotionUtil.fromItemStack(shopItem);
-						result.Potion = true;
-						result.PotionType = potion.toString();
-					}
+							PotionUtil potion = PotionUtil.fromItemStack(shopItem);
+							result.Potion = true;
+							result.PotionType = potion.toString();
+						}
 
-					ILocation loc = new BukkitLocation(shop.getLocation());
-					Plot p = PMCM.getPlotById(PMCM.getPlotId(loc), world);
-					if (p != null) {
-						result.PlotOwner = p.getOwner();
-						results.add(result);
-					} else {
-						Warn("Unable to find plot! " + shop.getLocation().toString());
+						String owner = plotProvider.getPlotOwner(shop.getLocation());
+						if (owner != null) {
+							result.PlotOwner = owner;
+							results.add(result);
+						} else {
+							Warn("Unable to find plot! " + shop.getLocation().toString());
+						}
 					}
 				}
+			}else{
+				Warn("Quickshop returned NO Shops");
 			}
-		}else{
-			Warn("Quickshop returned NO Shops");
-		}
 
-		if (DebugEnabled) {
-			logger.info("Sorting " + results.size() + " results for item " + SearchItem.getType().name());
-		}
+			if (DebugEnabled) {
+				logger.info("Sorting " + results.size() + " results for item " + SearchItem.getType().name());
+			}
 
-		// Order results here
-		if (SearchType == ShopType.SELLING) {
-			Collections.sort(results, ShopResultSort.ByPrice);
-		} else {
-			Collections.sort(results, ShopResultSort.ByPriceDescending);
+			// Order results here
+			if (SearchType == ShopType.SELLING) {
+				Collections.sort(results, ShopResultSort.ByPrice);
+			} else {
+				Collections.sort(results, ShopResultSort.ByPriceDescending);
+			}
+			return results;
 		}
-		return results;
-	}
 
 	public List<ShopResult> getPlayerShops(String player) {
-	    IWorld world = new BukkitWorld(Bukkit.getWorld(MarketWorld));
-	    PlotMeCoreManager PMCM = PlotMeCoreManager.getInstance();
+
 		List<ShopResult> results = new ArrayList<>();
 		HashMap<ShopChunk, HashMap<Location, Shop>> map = QSSM.getShops(MarketWorld);
 		if (map !=null) {
@@ -312,10 +297,9 @@ public class MarketSearch extends JavaPlugin {
 
 						ShopResult result = StoreResult(shop);
 
-						ILocation loc = new BukkitLocation(shop.getLocation());
-						Plot p = PMCM.getPlotById(PMCM.getPlotId(loc), world);
-						if (p != null) {
-							result.PlotOwner = p.getOwner();
+						String owner = plotProvider.getPlotOwner(shop.getLocation());
+						if (owner != null) {
+							result.PlotOwner = owner;
 							results.add(result);
 						} else {
 							Warn("Unable to find plot! " + shop.getLocation().toString());

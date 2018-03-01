@@ -4,6 +4,8 @@
   <artifactId>MarketSearch</artifactId>
   <version>1.4-SNAPSHOT</version>
   <name>MarketSearch</name>
+    <description>A set of helper commands to assist with QuickShop/Plot  market worlds</description>
+    <url>https://github.com/AddstarMC/MarketSearch</url>
     <properties>
         <build.number />
         <plugin.version>${project.version}-${build.number}</plugin.version>
@@ -76,17 +78,9 @@
       <dependency>
           <groupId>org.spigotmc</groupId>
           <artifactId>spigot-api</artifactId>
-          <version>1.11-R0.1-SNAPSHOT</version>
+          <version>1.12-R0.1-SNAPSHOT</version>
           <scope>provided</scope>
       </dependency>
-    <!-- Used for economy stuff -->
-    <dependency>
-      <groupId>net.milkbowl.vault</groupId>
-      <artifactId>VaultAPI</artifactId>
-      <version>1.6</version>
-      <scope>provided</scope>
-    </dependency>
-
     <dependency>
       <groupId>au.com.addstar</groupId>
       <artifactId>quickshop</artifactId>
@@ -97,16 +91,23 @@
     <dependency>
         <groupId>au.com.addstar</groupId>
         <artifactId>Monolith</artifactId>
-        <version>1.4.4-SNAPSHOT</version>
+        <version>1.4.7-SNAPSHOT</version>
         <scope>provided</scope>
     </dependency>
-
     <dependency>
         <groupId>com.worldcretornica</groupId>
         <artifactId>PlotMe-Core</artifactId>
         <version>0.16-SNAPSHOT</version>
+        <optional>true</optional>
         <scope>provided</scope>
     </dependency>
+      <dependency>
+          <groupId>com.intellectualcrafters</groupId>
+          <artifactId>PlotSquared</artifactId>
+          <version>3.5.1-SNAPSHOT</version>
+          <optional>true</optional>
+          <scope>provided</scope>
+      </dependency>
   </dependencies>
 
   <build>
