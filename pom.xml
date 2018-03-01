@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>MarketSearch</groupId>
   <artifactId>MarketSearch</artifactId>
-  <version>1.4-SNAPSHOT</version>
+  <version>1.4.1-SNAPSHOT</version>
   <name>MarketSearch</name>
     <description>A set of helper commands to assist with QuickShop/Plot  market worlds</description>
     <url>https://github.com/AddstarMC/MarketSearch</url>
