@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 public class PlotSquaredPlotProvider implements PlotProvider {
 
-    public PlotAPI api;
+    private final PlotAPI api;
 
     public PlotSquaredPlotProvider() {
         api = new PlotAPI();

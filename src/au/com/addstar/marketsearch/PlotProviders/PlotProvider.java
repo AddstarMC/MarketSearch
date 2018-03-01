@@ -1,8 +1,6 @@
 package au.com.addstar.marketsearch.PlotProviders;
 
 import org.bukkit.Location;
-import org.bukkit.entity.Player;
-
 /**
  * au.com.addstar.marketsearch.PlotProviders
  * Created for the Addstar MC for MarketSearch

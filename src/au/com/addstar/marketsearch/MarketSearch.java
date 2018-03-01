@@ -1,12 +1,6 @@
 package au.com.addstar.marketsearch;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 
@@ -39,7 +33,7 @@ import au.com.addstar.monolith.lookup.Lookup;
 import au.com.addstar.monolith.lookup.MaterialDefinition;
 import au.com.addstar.monolith.util.PotionUtil;
 
-public class MarketSearch extends JavaPlugin {
+class MarketSearch extends JavaPlugin {
 
 	public boolean isDebugEnabled() {
 		return DebugEnabled;
@@ -49,17 +43,16 @@ public class MarketSearch extends JavaPlugin {
 		DebugEnabled = debugEnabled;
 	}
 
-	public boolean DebugEnabled = false;
-	public String MarketWorld = null;
-	public ShopManager QSSM = null;
-	public PlotProvider plotProvider;
-	public Map<Enchantment, String> EnchantMap = new HashMap<>();
+	private boolean DebugEnabled = false;
+	private String MarketWorld = null;
+	private ShopManager QSSM = null;
+	private PlotProvider plotProvider;
+	private final Map<Enchantment, String> EnchantMap = new HashMap<>();
 	
 	private static final Logger logger = Logger.getLogger("Minecraft");
-	public PluginDescriptionFile pdfFile = null;
-	public PluginManager pm = null;
+	private PluginDescriptionFile pdfFile = null;
 
-	static class ShopResult {
+    static class ShopResult {
 		String PlotOwner;
 		String ShopOwner;
 		String ItemName;
@@ -81,7 +74,7 @@ public class MarketSearch extends JavaPlugin {
 	public void onEnable(){
 		// Register necessary events
 		pdfFile = this.getDescription();
-		pm = this.getServer().getPluginManager();
+        PluginManager pm = this.getServer().getPluginManager();
 		QSSM = QuickShop.instance.getShopManager();
 
 		if(pm.getPlugin("PlotMe") != null){
@@ -99,7 +92,7 @@ public class MarketSearch extends JavaPlugin {
 		MarketWorld = "market";
 		
 		getCommand("marketsearch").setExecutor(new CommandListener(this));
-		getCommand("marketsearch").setAliases(Arrays.asList("ms"));
+		getCommand("marketsearch").setAliases(Collections.singletonList("ms"));
 		
 		Log(pdfFile.getName() + " " + pdfFile.getVersion() + " has been enabled");
 	}
@@ -110,78 +103,69 @@ public class MarketSearch extends JavaPlugin {
 	}
 
 	public static class ShopResultSort {
-		public static Comparator<ShopResult> ByPrice = new Comparator<ShopResult>() {
-			@Override
-			public int compare(ShopResult shop1, ShopResult shop2) {
-				//Log("Compare: " + shop1.ShopOwner + " $" + shop1.Price + " / " + shop2.ShopOwner + " $" + shop2.Price);
-				if (shop1.Price.equals(shop2.Price)) {
-					//Log(" - Same!");
-					if (shop1.Stock > shop2.Stock) {
-						return -1;
-					}
+		static final Comparator<ShopResult> ByPrice = (shop1, shop2) -> {
+            //Log("Compare: " + shop1.ShopOwner + " $" + shop1.Price + " / " + shop2.ShopOwner + " $" + shop2.Price);
+            if (shop1.Price.equals(shop2.Price)) {
+                //Log(" - Same!");
+                if (shop1.Stock > shop2.Stock) {
+                    return -1;
+                }
 
-					if (shop1.Stock < shop2.Stock) {
-						return 1;
-					} else {
-						return 0;
-					}
+                if (shop1.Stock < shop2.Stock) {
+                    return 1;
+                } else {
+                    return 0;
+                }
 
-				}
-				
-				//Log(" - Not same!");
-				if (shop1.Price > shop2.Price) {
-					return 1;
-				}
+            }
 
-				if (shop1.Price < shop2.Price) {
-					return -1;
-				} else {
-					return 0;
-				}
+            //Log(" - Not same!");
+            if (shop1.Price > shop2.Price) {
+                return 1;
+            }
 
-			}
-		};
+            if (shop1.Price < shop2.Price) {
+                return -1;
+            } else {
+                return 0;
+            }
 
-		public static Comparator<ShopResult> ByPriceDescending = new Comparator<ShopResult>() {
-			@Override
-			public int compare(ShopResult shop1, ShopResult shop2) {
-				
-				if (shop1.Price.equals(shop2.Price)) {
-					if (shop1.Space > shop2.Space) {
-						return -1;
-					}
+        };
 
-					if (shop1.Space < shop2.Space) {
-						return 1;
-					} else {
-						return 0;
-					}
-				}
+		static final Comparator<ShopResult> ByPriceDescending = (shop1, shop2) -> {
 
-				if (shop1.Price > shop2.Price) {
-					return -1;
-				}
+            if (shop1.Price.equals(shop2.Price)) {
+                if (shop1.Space > shop2.Space) {
+                    return -1;
+                }
 
-				if (shop1.Price < shop2.Price) {
-					return 1;
-				} else {
-					return 0;
-				}
-			}
-		};
+                if (shop1.Space < shop2.Space) {
+                    return 1;
+                } else {
+                    return 0;
+                }
+            }
+
+            if (shop1.Price > shop2.Price) {
+                return -1;
+            }
+
+            if (shop1.Price < shop2.Price) {
+                return 1;
+            } else {
+                return 0;
+            }
+        };
 		
-		public static Comparator<ShopResult> ByStock = new Comparator<ShopResult>() {
-			@Override
-			public int compare(ShopResult shop1, ShopResult shop2) {
-				if (shop1.Stock == shop2.Stock) return 0;
+		public static final Comparator<ShopResult> ByStock = (shop1, shop2) -> {
+            if (Objects.equals(shop1.Stock, shop2.Stock)) return 0;
 
-				if (shop1.Stock > shop2.Stock) {
-					return 1;
-				} else {
-					return -1;
-				}
-			}
-		};
+            if (shop1.Stock > shop2.Stock) {
+                return 1;
+            } else {
+                return -1;
+            }
+        };
 	}
 
 	public List<ShopResult> SearchMarket(ItemStack SearchItem, ShopType SearchType) {
@@ -277,9 +261,9 @@ public class MarketSearch extends JavaPlugin {
 
 			// Order results here
 			if (SearchType == ShopType.SELLING) {
-				Collections.sort(results, ShopResultSort.ByPrice);
+				results.sort(ShopResultSort.ByPrice);
 			} else {
-				Collections.sort(results, ShopResultSort.ByPriceDescending);
+				results.sort(ShopResultSort.ByPriceDescending);
 			}
 			return results;
 		}
@@ -361,11 +345,11 @@ public class MarketSearch extends JavaPlugin {
 		EnchantMap.put(Enchantment.WATER_WORKER, "aqua");
 	}
 	
-	public void Log(String data) {
+	private void Log(String data) {
 		logger.info(pdfFile.getName() + " " + data);
 	}
 
-	public void Warn(String data) {
+	private void Warn(String data) {
 		logger.warning(pdfFile.getName() + " " + data);
 	}
 	
@@ -378,18 +362,11 @@ public class MarketSearch extends JavaPlugin {
 	/*
 	 * Check if the player has the specified permission
 	 */
-	public boolean HasPermission(Player player, String perm) {
-		if (player instanceof Player) {
-			// Real player
-			if (player.hasPermission(perm)) {
-				return true;
-			}
-		} else {
-			// Console has permissions for everything
-			return true;
-		}
-		return false;
-	}
+    private boolean HasPermission(Player player, String perm) {
+        // Real player
+        return !(player instanceof Player) || player.hasPermission(perm);
+// Console has permissions for everything
+    }
 	
 	/*
 	 * Check required permission and send error response to player if not allowed
@@ -408,14 +385,11 @@ public class MarketSearch extends JavaPlugin {
 	 * Check if player is online
 	 */
 	public boolean IsPlayerOnline(String player) {
-		if (player == null) { return false; }
-		if (player == "") { return false; }
-		if (this.getServer().getPlayer(player) != null) {
-			// Found player.. they must be online!
-			return true;
-		}
-		return false;
-	}
+        if (player == null) {
+            return false;
+        }
+        return !Objects.equals(player, "") && this.getServer().getPlayer(player) != null;
+    }
 
 	public Material GetMaterial(String name) {
 		Material mat = Material.matchMaterial(name);
@@ -524,7 +498,7 @@ public class MarketSearch extends JavaPlugin {
 		return parts;
 	}
 
-    public MaterialDefinition getMaterial(String name)
+    private MaterialDefinition getMaterial(String name)
 	{
 		// Bukkit name
 		Material mat = Material.getMaterial(name.toUpperCase());
@@ -537,7 +511,7 @@ public class MarketSearch extends JavaPlugin {
 			short id = Short.parseShort(name);
 			mat = Material.getMaterial(id);
 		}
-		catch(NumberFormatException e)
+		catch(NumberFormatException ignored)
 		{
 		}
 		

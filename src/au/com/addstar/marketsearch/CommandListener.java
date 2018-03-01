@@ -16,12 +16,12 @@ import org.bukkit.inventory.ItemStack;
 import org.maxgamer.QuickShop.Shop.ShopType;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
-public class CommandListener implements CommandExecutor {
-	private MarketSearch plugin;
+class CommandListener implements CommandExecutor {
+	private final MarketSearch plugin;
 
 	public CommandListener(MarketSearch plugin) {
 		this.plugin = plugin;
@@ -132,7 +132,6 @@ public class CommandListener implements CommandExecutor {
 								if (result.PotionType.toLowerCase().contains(filterText)) {
 									results.add(result);
 								}
-								continue;
 							}
 
 						}
@@ -230,7 +229,7 @@ public class CommandListener implements CommandExecutor {
 				}
 
 				// Stock summary
-				if (stockcmd == "") {
+				if (Objects.equals(stockcmd, "")) {
 					int OutOfStock = 0;
 					int LessThan10 = 0;
 					int LessThan64 = 0;
@@ -284,7 +283,7 @@ public class CommandListener implements CommandExecutor {
 					}
 
 					// First sort results by price
-					Collections.sort(results, ShopResultSort.ByStock);
+					results.sort(ShopResultSort.ByStock);
 
 					int count = 0;
 					for (ShopResult result : results) {

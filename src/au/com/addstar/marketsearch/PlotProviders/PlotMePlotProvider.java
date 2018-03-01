@@ -17,14 +17,11 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public class PlotMePlotProvider implements PlotProvider{
 
-    private PlotMe_CorePlugin PlotMePlugin = null;
     private PlotMeCoreManager PMCM;
 
     public PlotMePlotProvider(JavaPlugin plotMePlugin) {
         if(plotMePlugin instanceof PlotMe_CorePlugin) {
-            PlotMePlugin = (PlotMe_CorePlugin) plotMePlugin;
             PMCM = PlotMeCoreManager.getInstance();
-
         }
     }
 
