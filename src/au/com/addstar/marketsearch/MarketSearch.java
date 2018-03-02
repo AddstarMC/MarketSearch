@@ -81,11 +81,13 @@ class MarketSearch extends JavaPlugin {
 		if(pm.getPlugin("PlotMe") != null){
 			JavaPlugin plugin = (JavaPlugin) pm.getPlugin("PlotMe");
 			plotProvider = new PlotMePlotProvider(plugin);
+			Log("PlotProvider: Plotme hooked");
 		}
 		if(pm.getPlugin("PlotSquared") != null){
             Plugin plotsquared = pm.getPlugin("PlotSquared");
             if(plotsquared != null && plotsquared.isEnabled()){
                 plotProvider = new PlotSquaredPlotProvider();
+				Log("PlotProvider: PlotSquared hooked");
             }
         }
 		LoadEnchants();
