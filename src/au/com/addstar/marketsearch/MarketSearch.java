@@ -34,7 +34,7 @@ import au.com.addstar.monolith.lookup.Lookup;
 import au.com.addstar.monolith.lookup.MaterialDefinition;
 import au.com.addstar.monolith.util.PotionUtil;
 
-class MarketSearch extends JavaPlugin {
+public class MarketSearch extends JavaPlugin {
 
 	public boolean isDebugEnabled() {
 		return DebugEnabled;
