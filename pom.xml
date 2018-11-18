@@ -36,12 +36,12 @@
         <repository>
             <id>maven.addstar.com.au</id>
             <name>maven.addstar.com.au-releases</name>
-            <url>http://maven.addstar.com.au/artifactory/ext-release-local</url>
+            <url>https://maven.addstar.com.au/artifactory/ext-release-local</url>
         </repository>
         <snapshotRepository>
             <id>maven.addstar.com.au</id>
             <name>maven.addstar.com.au-snapshots</name>
-            <url>http://maven.addstar.com.au/artifactory/ext-snapshot-local</url>
+            <url>https://maven.addstar.com.au/artifactory/ext-snapshot-local</url>
         </snapshotRepository>
     </distributionManagement>
     <repositories>
@@ -55,14 +55,14 @@
         <!-- Addstar repos -->
         <repository>
             <id>addstar-repo</id>
-            <url>http://maven.addstar.com.au/artifactory/ext-release-local</url>
+            <url>https://maven.addstar.com.au/artifactory/ext-release-local</url>
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
         </repository>
         <repository>
             <id>addstar-snapshot-repo</id>
-            <url>http://maven.addstar.com.au/artifactory/ext-snapshot-local</url>
+            <url>https://maven.addstar.com.au/artifactory/ext-snapshot-local</url>
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
