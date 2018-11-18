@@ -2,8 +2,11 @@ package au.com.addstar.marketsearch.PlotProviders;
 
 import com.intellectualcrafters.plot.api.PlotAPI;
 import com.intellectualcrafters.plot.object.Plot;
+import com.intellectualcrafters.plot.object.PlotPlayer;
+import com.plotsquared.bukkit.util.BukkitUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.entity.Player;
 
 import java.util.UUID;
 
@@ -28,5 +31,10 @@ public class PlotSquaredPlotProvider implements PlotProvider {
                 return Bukkit.getOfflinePlayer(uuid).getName();
         }
         return null;
+    }
+    
+    public void gotoPlot(Player player, Location loc){
+        Plot plot = api.getPlot(loc);
+        player.teleport(BukkitUtil.getLocation(plot.getHome()));
     }
 }

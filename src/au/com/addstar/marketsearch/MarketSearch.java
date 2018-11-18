@@ -4,11 +4,12 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 
+import au.com.addstar.marketsearch.PlotProviders.PlotMePlotProvider;
 import au.com.addstar.marketsearch.PlotProviders.PlotProvider;
 import au.com.addstar.marketsearch.PlotProviders.PlotSquaredPlotProvider;
 
+import au.com.addstar.marketsearch.PlotProviders.USkyBlockProvider;
 import org.apache.commons.lang.StringUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -32,6 +33,7 @@ import org.maxgamer.QuickShop.Shop.ShopType;
 
 import au.com.addstar.monolith.lookup.Lookup;
 import au.com.addstar.monolith.util.PotionUtil;
+import us.talabrek.ultimateskyblock.api.uSkyBlockAPI;
 
 public class MarketSearch extends JavaPlugin {
 
@@ -76,6 +78,20 @@ public class MarketSearch extends JavaPlugin {
 		pdfFile = this.getDescription();
         PluginManager pm = this.getServer().getPluginManager();
 		QSSM = QuickShop.instance.getShopManager();
+		
+        if(pm.getPlugin("uSkyBlock") != null){
+            Plugin uSkyBlock = pm.getPlugin("uSkyBlock");
+            if(uSkyBlock != null && uSkyBlock.isEnabled()){
+                plotProvider = new USkyBlockProvider((uSkyBlockAPI)uSkyBlock);
+                Log("PlotProvider: uSkyBlock hooked");
+            }
+        }
+		if(pm.getPlugin("PlotMe") != null){
+			JavaPlugin plugin = (JavaPlugin) pm.getPlugin("PlotMe");
+			plotProvider = new PlotMePlotProvider(plugin);
+			Log("PlotProvider: Plotme hooked");
+		}
+
 		if(pm.getPlugin("PlotSquared") != null){
             Plugin plotsquared = pm.getPlugin("PlotSquared");
             if(plotsquared != null && plotsquared.isEnabled()){
@@ -83,6 +99,7 @@ public class MarketSearch extends JavaPlugin {
 				Log("PlotProvider: PlotSquared hooked");
             }
         }
+		
 		LoadEnchants();
 		
 		MarketWorld = "market";

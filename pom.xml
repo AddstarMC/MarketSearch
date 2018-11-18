@@ -75,6 +75,14 @@
             <id>maven-central</id>
             <url>http://repo1.maven.org/maven2/</url>
         </repository>
+            <repository>
+                <id>uSkyBlock-mvn-repo</id>
+                <url>https://raw.github.com/rlf/uSkyBlock/mvn-repo/</url>
+                <snapshots>
+                    <enabled>true</enabled>
+                    <updatePolicy>always</updatePolicy>
+                </snapshots>
+            </repository>
     </repositories>
 
     <dependencies>
@@ -101,6 +109,20 @@
             <groupId>com.intellectualcrafters</groupId>
             <artifactId>PlotSquared</artifactId>
             <version>3.5.1-SNAPSHOT</version>
+            <optional>true</optional>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.rlf</groupId>
+            <artifactId>uSkyBlock-API</artifactId>
+            <version>2.6.4</version>
+            <optional>true</optional>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.worldcretornica</groupId>
+            <artifactId>PlotMe-Core</artifactId>
+            <version>0.16-SNAPSHOT</version>
             <optional>true</optional>
             <scope>provided</scope>
         </dependency>
