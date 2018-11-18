@@ -3,7 +3,6 @@ package au.com.addstar.marketsearch;
 import au.com.addstar.marketsearch.MarketSearch.ShopResult;
 import au.com.addstar.marketsearch.MarketSearch.ShopResultSort;
 import au.com.addstar.monolith.lookup.Lookup;
-import au.com.addstar.monolith.lookup.MaterialDefinition;
 import com.google.common.base.Strings;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
@@ -75,12 +74,12 @@ class CommandListener implements CommandExecutor {
 
 				// Validate the material and perform the search
 				// But first, check for 'hand' argument
-				MaterialDefinition searchfor;
+				Material searchfor;
 				if (search.equalsIgnoreCase("hand")) {
 					Player ply = (Player) sender;
 					ItemStack hand = ply.getInventory().getItemInMainHand();
 					if (hand != null && hand.getType() != Material.AIR) /* Empty hand is Material.AIR */
-						searchfor = MaterialDefinition.from(hand);
+						searchfor = hand.getType();
 					else {
 						sender.sendMessage(ChatColor.RED + "You need to be holding an item first!");
 						return true;
@@ -97,9 +96,9 @@ class CommandListener implements CommandExecutor {
 				if (searchfor != null) {
 					List<ShopResult> resultsUnfiltered;
 					if (action.equals("SELL")) {
-						resultsUnfiltered = plugin.SearchMarket(searchfor.asItemStack(1), ShopType.BUYING);
+						resultsUnfiltered = plugin.SearchMarket(new ItemStack(searchfor, 1), ShopType.BUYING);
 					} else {
-						resultsUnfiltered = plugin.SearchMarket(searchfor.asItemStack(1), ShopType.SELLING);
+						resultsUnfiltered = plugin.SearchMarket(new ItemStack(searchfor, 1), ShopType.SELLING);
 					}
 
 					List<ShopResult> results;
@@ -151,7 +150,7 @@ class CommandListener implements CommandExecutor {
 
 					Set<String> names = Lookup.findNameByItem(searchfor);
 					sender.sendMessage(ChatColor.GREEN + "Page " + page + "/" + pages + ": " +
-							ChatColor.YELLOW + "(" + searchfor.getMaterial().getId() + ":" + searchfor.getData() + ") " +
+							ChatColor.YELLOW + "(" + searchfor.name() + ") " +
 							ChatColor.WHITE + StringUtils.join(names, ", "));
 
 					if (results.size() > 0) {

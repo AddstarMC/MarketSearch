@@ -1,6 +1,7 @@
 name: MarketSearch
 main: au.com.addstar.marketsearch.MarketSearch
 version: ${plugin.version}
+api-version: ${spigot.api.version}
 author: add5tar
 softdepend: [Multiverse-Core, My Worlds, QuickShop, PlotMe, PlotSquared]
 website:  ${project.url}

@@ -4,11 +4,11 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 
-import au.com.addstar.marketsearch.PlotProviders.PlotMePlotProvider;
 import au.com.addstar.marketsearch.PlotProviders.PlotProvider;
 import au.com.addstar.marketsearch.PlotProviders.PlotSquaredPlotProvider;
 
 import org.apache.commons.lang.StringUtils;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -31,7 +31,6 @@ import org.maxgamer.QuickShop.Shop.ShopManager;
 import org.maxgamer.QuickShop.Shop.ShopType;
 
 import au.com.addstar.monolith.lookup.Lookup;
-import au.com.addstar.monolith.lookup.MaterialDefinition;
 import au.com.addstar.monolith.util.PotionUtil;
 
 public class MarketSearch extends JavaPlugin {
@@ -77,12 +76,6 @@ public class MarketSearch extends JavaPlugin {
 		pdfFile = this.getDescription();
         PluginManager pm = this.getServer().getPluginManager();
 		QSSM = QuickShop.instance.getShopManager();
-
-		if(pm.getPlugin("PlotMe") != null){
-			JavaPlugin plugin = (JavaPlugin) pm.getPlugin("PlotMe");
-			plotProvider = new PlotMePlotProvider(plugin);
-			Log("PlotProvider: Plotme hooked");
-		}
 		if(pm.getPlugin("PlotSquared") != null){
             Plugin plotsquared = pm.getPlugin("PlotSquared");
             if(plotsquared != null && plotsquared.isEnabled()){
@@ -215,7 +208,7 @@ public class MarketSearch extends JavaPlugin {
 					}
 
 					// Is this a spawn egg?
-					if (shopItem.getType() == Material.MONSTER_EGG) {
+                    if (shopItem.getItemMeta() instanceof SpawnEggMeta) {
 
 						ItemMeta itemMeta = shopItem.getItemMeta();
 						SpawnEggMeta eggMeta = null;
@@ -487,8 +480,8 @@ public class MarketSearch extends JavaPlugin {
 			sender.sendMessage(ChatColor.AQUA + "/ms debug :" + ChatColor.WHITE + " Switch debugging on and off as a toggle");
 		}
 	}
-	
-	public MaterialDefinition getItem(String search)
+
+    public Material getItem(String search)
 	{
 		// Split the search term on the colon to obtain the material name and optionally a data value or text filter
 		// The data value could be an integer for item data, or text to filter on
@@ -497,34 +490,26 @@ public class MarketSearch extends JavaPlugin {
 		String[] parts = getSearchParts(search);
 		String itemname = parts[0];
 
-		MaterialDefinition def = getMaterial(itemname);
+        Material def = getMaterial(itemname);
 		if (def == null) return null;
 
 		// Check if we should override the data value with one supplied
 		if(parts.length > 1) {
-			String dpart = parts[1];
 			try {
 				if (!StringUtils.isNumeric(parts[1])) {
 					// For enchanted tools, the user is allowed to filter for a given enchant
 					// For spawn eggs, the user is allowed to specify the mob name instead of ID
 					// Just return the generic material for now
 					return def;
-				}
+                } else {
+                    return def;
+                }
+            } catch (NumberFormatException e) {
 
-				short data = Short.parseShort(dpart);
-				if(data < 0)
-					throw new IllegalArgumentException("Data value for " + itemname + " cannot be less than 0");
-
-				// Return new definition with specified data value
-				return new MaterialDefinition(def.getMaterial(), data);
-			}
-			catch(NumberFormatException e) {
-				throw new IllegalArgumentException("Data value after " + itemname);
-			}
-		} else {
-			return def;
-		}
-	}
+            }
+        }
+        return null;
+    }
 
 	public String getFilterText(String search) {
 		String[] parts = getSearchParts(search);
@@ -563,25 +548,13 @@ public class MarketSearch extends JavaPlugin {
 		return parts;
 	}
 
-    private MaterialDefinition getMaterial(String name)
+    private Material getMaterial(String name)
 	{
 		// Bukkit name
 		Material mat = Material.getMaterial(name.toUpperCase());
 		if (mat != null)
-			return new MaterialDefinition(mat, (short)0);
-		
-		// Id
-		try
-		{
-			short id = Short.parseShort(name);
-			mat = Material.getMaterial(id);
-		}
-		catch(NumberFormatException ignored)
-		{
-		}
-		
-		if(mat != null)
-			return new MaterialDefinition(mat, (short)0);
+            return mat;
+
 
 		// ItemDB
 		return Lookup.findItemByName(name);
@@ -607,8 +580,7 @@ public class MarketSearch extends JavaPlugin {
 		ShopResult result = new ShopResult();
 		ItemStack foundItem = shop.getItem();
 		result.ShopOwner = shop.getOwner().getName();
-		result.ItemID = foundItem.getTypeId();
-		result.Data = foundItem.getData().getData();
+        result.Type = foundItem.getType().name();
 
 		if (result.Data > 0)
 			result.ItemName = InitialCaps(foundItem.getType().name()) + " (" + result.ItemID + ":" + result.Data + ")";
