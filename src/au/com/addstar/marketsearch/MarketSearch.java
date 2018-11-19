@@ -4,7 +4,6 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 
-import au.com.addstar.marketsearch.PlotProviders.PlotMePlotProvider;
 import au.com.addstar.marketsearch.PlotProviders.PlotProvider;
 import au.com.addstar.marketsearch.PlotProviders.PlotSquaredPlotProvider;
 
@@ -86,11 +85,6 @@ public class MarketSearch extends JavaPlugin {
                 Log("PlotProvider: uSkyBlock hooked");
             }
         }
-		if(pm.getPlugin("PlotMe") != null){
-			JavaPlugin plugin = (JavaPlugin) pm.getPlugin("PlotMe");
-			plotProvider = new PlotMePlotProvider(plugin);
-			Log("PlotProvider: Plotme hooked");
-		}
 
 		if(pm.getPlugin("PlotSquared") != null){
             Plugin plotsquared = pm.getPlugin("PlotSquared");
