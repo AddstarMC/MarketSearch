@@ -67,9 +67,9 @@ class CommandListener implements CommandExecutor {
 					// Ending is a page number
 					page = Integer.valueOf(lastarg);
 					if (page < 1) page = 1;
-					search = StringUtils.join(args, "", 1, args.length - 1);
+					search = StringUtils.join(args, "_", 1, args.length - 1);
 				} else {
-					search = StringUtils.join(args, "", 1, args.length);
+					search = StringUtils.join(args, "_", 1, args.length);
 				}
 
 				// Validate the material and perform the search
@@ -89,6 +89,8 @@ class CommandListener implements CommandExecutor {
 						searchfor = plugin.getItem(search);
 					} catch (Exception e) {
 						sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
+						plugin.Debug("Exception caught: " + e.getCause());
+						plugin.Debug(e.getMessage());
 						return true;
 					}
 				}
@@ -144,11 +146,12 @@ class CommandListener implements CommandExecutor {
 					int pages = (int) Math.ceil((double) results.size() / perpage);
 
 					if (page > pages) {
-						sender.sendMessage(ChatColor.RED + "Sorry, no results found.");
+						sender.sendMessage(ChatColor.RED + "Sorry, no results found for " + searchfor.name());
 						return true;
 					}
 
 					Set<String> names = Lookup.findNameByItem(searchfor);
+					plugin.Debug(searchfor.name() + " aliases: " + String.join(", ", names));
 					sender.sendMessage(ChatColor.GREEN + "Page " + page + "/" + pages + ": " +
 							ChatColor.YELLOW + "(" + searchfor.name() + ") " +
 							ChatColor.WHITE + StringUtils.join(names, ", "));
@@ -211,6 +214,7 @@ class CommandListener implements CommandExecutor {
 					}
 				} else {
 					sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
+					plugin.Debug("Warning: getItem() returned null");
 				}
 				break;
 

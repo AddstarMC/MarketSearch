@@ -502,7 +502,11 @@ public class MarketSearch extends JavaPlugin {
 		String itemname = parts[0];
 
         Material def = getMaterial(itemname);
-		if (def == null) return null;
+		if (def == null) {
+			Debug("Warning: getMaterial() returned null for: " + itemname);
+			return null;
+		}
+		Debug("getMaterial returned: " + def.name());
 
 		// Check if we should override the data value with one supplied
 		if(parts.length > 1) {
@@ -516,10 +520,10 @@ public class MarketSearch extends JavaPlugin {
                     return def;
                 }
             } catch (NumberFormatException e) {
-
+				Debug("Warning: NumberFormatException caught in getItem()");
             }
         }
-        return null;
+        return def;
     }
 
 	public String getFilterText(String search) {
