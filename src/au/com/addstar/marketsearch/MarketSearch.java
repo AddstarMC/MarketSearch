@@ -286,57 +286,57 @@ public class MarketSearch extends JavaPlugin {
 						eggDebugMessageCount++;
 					}
 
-						// Is this an enchanted book?
-						if (shopItem.getType() == Material.ENCHANTED_BOOK) {
+					// Is this an enchanted book?
+					if (shopItem.getType() == Material.ENCHANTED_BOOK) {
 
-							EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta) shopItem.getItemMeta();
+						EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta) shopItem.getItemMeta();
 
-							if (bookMeta.hasStoredEnchants()) {
-								// Store the enchantment(s)
-								result.Enchanted = true;
-								result.Enchants = bookMeta.getStoredEnchants();
-							} else {
-								if (DebugEnabled) {
-									logger.info("No stored enchants on book");
-								}
+						if (bookMeta.hasStoredEnchants()) {
+							// Store the enchantment(s)
+							result.Enchanted = true;
+							result.Enchants = bookMeta.getStoredEnchants();
+						} else {
+							if (DebugEnabled) {
+								logger.info("No stored enchants on book");
 							}
 						}
+					}
 
-						// Is this a potion?
-						if (shopItem.getType() == Material.POTION ||
-								shopItem.getType() == Material.SPLASH_POTION ||
-								shopItem.getType() == Material.LINGERING_POTION) {
+					// Is this a potion?
+					if (shopItem.getType() == Material.POTION ||
+							shopItem.getType() == Material.SPLASH_POTION ||
+							shopItem.getType() == Material.LINGERING_POTION) {
 
-							PotionUtil potion = PotionUtil.fromItemStack(shopItem);
-							result.Potion = true;
-							result.PotionType = potion.toString();
-						}
+						PotionUtil potion = PotionUtil.fromItemStack(shopItem);
+						result.Potion = true;
+						result.PotionType = potion.toString();
+					}
 
-						String owner = plotProvider.getPlotOwner(shop.getLocation());
-						if (owner != null) {
-							result.PlotOwner = owner;
-							results.add(result);
-						} else {
-							Warn("Unable to find plot! " + shop.getLocation().toString());
-						}
+					String owner = plotProvider.getPlotOwner(shop.getLocation());
+					if (owner != null) {
+						result.PlotOwner = owner;
+						results.add(result);
+					} else {
+						Warn("Unable to find plot! " + shop.getLocation().toString());
 					}
 				}
-			}else{
-				Warn("Quickshop returned NO Shops");
 			}
-
-			if (DebugEnabled) {
-				logger.info("Sorting " + results.size() + " results for item " + SearchItem.getType().name());
-			}
-
-			// Order results here
-			if (SearchType == ShopType.SELLING) {
-				results.sort(ShopResultSort.ByPrice);
-			} else {
-				results.sort(ShopResultSort.ByPriceDescending);
-			}
-			return results;
+		}else{
+			Warn("Quickshop returned NO Shops");
 		}
+
+		if (DebugEnabled) {
+			logger.info("Sorting " + results.size() + " results for item " + SearchItem.getType().name());
+		}
+
+		// Order results here
+		if (SearchType == ShopType.SELLING) {
+			results.sort(ShopResultSort.ByPrice);
+		} else {
+			results.sort(ShopResultSort.ByPriceDescending);
+		}
+		return results;
+	}
 
 	public List<ShopResult> getPlayerShops(String player) {
 
@@ -500,11 +500,11 @@ public class MarketSearch extends JavaPlugin {
 		// The data value is not required to be present
 
 		String[] parts = getSearchParts(search);
-		String itemname = parts[0];
+		String itemName = parts[0];
 
-        Material def = getMaterial(itemname);
+        Material def = getMaterial(itemName);
 		if (def == null) {
-			Debug("Warning: getMaterial() returned null for: " + itemname);
+			Debug("Warning: getMaterial() returned null for: " + itemName);
 			return null;
 		}
 		Debug("getMaterial returned: " + def.name());

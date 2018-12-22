@@ -141,9 +141,8 @@ class CommandListener implements CommandExecutor {
 						results = resultsUnfiltered;
 					}
 
-
-					int perpage = 10;
-					int pages = (int) Math.ceil((double) results.size() / perpage);
+					int perPage = 10;
+					int pages = (int) Math.ceil((double) results.size() / perPage);
 
 					if (page > pages) {
 						if (page > 1)
@@ -162,8 +161,8 @@ class CommandListener implements CommandExecutor {
 					if (results.size() > 0) {
 						String ownerstr;
 						String extraInfo = "";
-						int start = (perpage * (page - 1));
-						int end = start + perpage - 1;
+						int start = (perPage * (page - 1));
+						int end = start + perPage - 1;
 						for (int x = start; x <= end; x++) {
 							if (x > (results.size() - 1)) break;        // Don't go beyond the end of the results
 
