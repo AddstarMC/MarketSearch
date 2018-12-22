@@ -49,7 +49,7 @@ class CommandListener implements CommandExecutor {
 					sender.sendMessage(ChatColor.GREEN +
 							" - filter weapon enchants using /ms find diamond_sword:fire");
 					sender.sendMessage(ChatColor.GREEN +
-							" - filter spawn eggs using /ms find monster_egg:cow");
+							" - find spawn eggs using /ms find cow_spawn_egg or chicken_spawn_egg");
 
 					return true;
 				}
@@ -108,7 +108,7 @@ class CommandListener implements CommandExecutor {
 					String filterText = plugin.getFilterText(search);
 					if (resultsUnfiltered.size() > 0 && !Strings.isNullOrEmpty(filterText)) {
 
-						// Filter the results to only keep those that contain filterText for an enchant, spawn egg type, or potion type
+						// Filter the results to only keep those that contain filterText for an enchant or potion
 						results = new ArrayList<>();
 						filterText = filterText.toLowerCase();
 
@@ -146,7 +146,10 @@ class CommandListener implements CommandExecutor {
 					int pages = (int) Math.ceil((double) results.size() / perpage);
 
 					if (page > pages) {
-						sender.sendMessage(ChatColor.RED + "Sorry, no results found for " + searchfor.name());
+						if (page > 1)
+							sender.sendMessage(ChatColor.RED + "No more results found for " + searchfor.name() + "; try page " + (page - 1));
+						else
+							sender.sendMessage(ChatColor.RED + "Sorry, no results found for " + searchfor.name());
 						return true;
 					}
 
@@ -207,9 +210,9 @@ class CommandListener implements CommandExecutor {
 						}
 					} else {
 						if (action.equals("SELL")) {
-							sender.sendMessage(ChatColor.RED + "Sorry, there are no shops buying that.");
+							sender.sendMessage(ChatColor.RED + "Sorry, there are no shops buying " + searchfor.name());
 						} else {
-							sender.sendMessage(ChatColor.RED + "Sorry, no stock available in any shop.");
+							sender.sendMessage(ChatColor.RED + "Sorry, no stock available in any shop for " + searchfor.name());
 						}
 					}
 				} else {

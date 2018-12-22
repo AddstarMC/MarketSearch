@@ -207,8 +207,9 @@ public class MarketSearch extends JavaPlugin {
 						continue;
 					}    // No space
 					if (shop.getShopType() != SearchType) {
+						// Wrong shop type
 						continue;
-					}                                    // Wrong shop type
+					}
 
 					ShopResult result = StoreResult(shop);
 
@@ -495,8 +496,8 @@ public class MarketSearch extends JavaPlugin {
     public Material getItem(String search)
 	{
 		// Split the search term on the colon to obtain the material name and optionally a data value or text filter
-		// The data value could be an integer for item data, or text to filter on
-		// The data value is not required to ber present
+		// The data value could text to filter on, e.g. diamond_sword:fire or diamond_shovel:eff
+		// The data value is not required to be present
 
 		String[] parts = getSearchParts(search);
 		String itemname = parts[0];
