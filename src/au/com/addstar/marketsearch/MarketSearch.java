@@ -188,12 +188,14 @@ public class MarketSearch extends JavaPlugin {
 						continue;
 					}    // Wrong item
 
+					// Durability is deprecated in 1.13
+					//
 					// Only compare data/durability for items with no real durability (blocks, etc)
-					if (SearchItem.getType().getMaxDurability() == 0) {
-						if (shopItem.getDurability() != SearchItem.getDurability()) {
-							continue;
-						}
-					}
+					// if (SearchItem.getType().getMaxDurability() == 0) {
+					// 	if (shopItem.getDurability() != SearchItem.getDurability()) {
+					// 		continue;
+					// 	}
+					// }
 
 					if (SearchType == ShopType.SELLING && shop.getRemainingStock() == 0) {
 						continue;
