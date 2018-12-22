@@ -335,12 +335,23 @@ class CommandListener implements CommandExecutor {
 						return false;
 					}
 				}
-				if (plugin.isDebugEnabled()) {
-					plugin.setDebugEnabled(false);
-				} else {
-					plugin.setDebugEnabled(true);
+
+				int debugLevel = 1;
+
+				if (args.length > 1) {
+					if (StringUtils.isNumeric(args[1]))
+						debugLevel = Integer.parseInt(args[1]);
+					else
+						sender.sendMessage(ChatColor.RED + "Debug level should be an integer, not "+ args[1]);
 				}
-				sender.sendMessage(ChatColor.RED + "MS Debug is "+ plugin.isDebugEnabled());
+
+				if (args.length == 1 && plugin.isDebugEnabled()) {
+					plugin.setDebugEnabled(false);
+					sender.sendMessage(ChatColor.RED + "MS Debug is now off");
+				} else {
+					plugin.setDebugEnabled(true, debugLevel);
+					sender.sendMessage(ChatColor.RED + "MS Debug is now on, debug level " + debugLevel);
+				}
 				break;
 			default:
 			plugin.SendHelp(sender);

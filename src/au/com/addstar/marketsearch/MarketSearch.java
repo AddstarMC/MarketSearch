@@ -44,7 +44,16 @@ public class MarketSearch extends JavaPlugin {
 		DebugEnabled = debugEnabled;
 	}
 
+	public void setDebugEnabled(boolean debugEnabled, int debugLevel) {
+		DebugEnabled = debugEnabled;
+		DebugLevel = debugLevel;
+	}
+
 	private boolean DebugEnabled = false;
+
+	// Higher numbers lead to more debug messages
+	private int DebugLevel = 1;
+
 	private String MarketWorld = null;
 	private ShopManager QSSM = null;
 	private PlotProvider plotProvider;
@@ -420,6 +429,8 @@ public class MarketSearch extends JavaPlugin {
 		}
 		if(!(sender instanceof Player) || (HasPermission((Player) sender, "marketsearch.debug"))) {
 			sender.sendMessage(ChatColor.AQUA + "/ms debug :" + ChatColor.WHITE + " Switch debugging on and off as a toggle");
+			sender.sendMessage(ChatColor.AQUA + "/ms debug 1 :" + ChatColor.WHITE + " When enabling debug, optionally use 1 for normal logging");
+			sender.sendMessage(ChatColor.AQUA + "/ms debug 2 :" + ChatColor.WHITE + " Use 2 for detailed logging");
 		}
 	}
 
