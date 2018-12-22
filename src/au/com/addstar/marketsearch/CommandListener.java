@@ -122,13 +122,6 @@ class CommandListener implements CommandExecutor {
 								continue;
 							}
 
-							if (result.SpawnEgg) {
-								if (result.SpawnType == null || result.SpawnType.toString().toLowerCase().contains(filterText)) {
-									results.add(result);
-								}
-								continue;
-							}
-
 							if (result.Potion) {
 								if (result.PotionType == null || result.PotionType.toLowerCase().contains(filterText)) {
 									results.add(result);
@@ -177,13 +170,6 @@ class CommandListener implements CommandExecutor {
 								extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + enchantType + ChatColor.DARK_PURPLE + "]";
 								extraInfo = extraInfo.replace("/", ChatColor.DARK_PURPLE + "/" + ChatColor.LIGHT_PURPLE);
 							} else {
-								if (result.SpawnEgg) {
-									String spawnType = "??UnknownMob??";
-									if (result.SpawnType != null) {
-										spawnType = result.SpawnType.toString();
-									}
-									extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + spawnType + ChatColor.DARK_PURPLE + "]";
-								}
 
 								if (result.Potion) {
 									String potionType = "??UnknownPotion??";

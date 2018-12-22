@@ -67,8 +67,6 @@ public class MarketSearch extends JavaPlugin {
 		Map<Enchantment, Integer> Enchants = null;
 		Boolean Potion = false;
 		String PotionType = null;
-		Boolean SpawnEgg = false;
-		EntityType SpawnType = EntityType.CHICKEN;
 	}
 	
 	@Override
@@ -179,10 +177,7 @@ public class MarketSearch extends JavaPlugin {
 		List<ShopResult> results = new ArrayList<>();
 		HashMap<ShopChunk, HashMap<Location, Shop>> map = QSSM.getShops(MarketWorld);
 
-		int eggDebugMessageCount = 0;
-		int eggDebugMessageLimit = 3;
-
-		if (map !=null) {
+		if (map != null) {
 			for (Entry<ShopChunk, HashMap<Location, Shop>> chunks : map.entrySet()) {
 
 				for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
@@ -217,73 +212,6 @@ public class MarketSearch extends JavaPlugin {
 					if (shopItem.getEnchantments().size() > 0) {
 						result.Enchants = shopItem.getEnchantments();
 						result.Enchanted = true;
-					}
-
-					// Is this a spawn egg?
-                    if (shopItem.getItemMeta() instanceof SpawnEggMeta) {
-
-						ItemMeta itemMeta = shopItem.getItemMeta();
-						SpawnEggMeta eggMeta = null;
-
-						boolean showDebugForEgg = (DebugEnabled && eggDebugMessageCount <= eggDebugMessageLimit);
-
-						if (showDebugForEgg) {
-							logger.info("Retrieve SpawnEggMeta for " + shopItem.toString());
-							logger.info("TryCast " + itemMeta.toString());
-						}
-
-						try {
-							eggMeta = (SpawnEggMeta) itemMeta;
-						} catch (ClassCastException e) {
-							e.printStackTrace();
-						}
-
-						EntityType eggSpawnType;
-						String eggName;
-
-						if (showDebugForEgg) {
-							if (eggMeta == null)
-								logger.info("Cast (SpawnEggMeta) itemMeta returned null");
-							else
-								logger.info("Determine entity type using " + eggMeta);
-						}
-
-						try {
-							eggSpawnType = eggMeta.getSpawnedType();
-						} catch (Exception e) {
-							e.printStackTrace();
-							eggSpawnType = EntityType.CHICKEN;
-						}
-
-						if (showDebugForEgg) {
-							if (eggSpawnType == null)
-								logger.info("eggMeta.getSpawnedType() returned null");
-							else
-								logger.info("EggSpawnType is " + eggSpawnType);
-						}
-
-						if (showDebugForEgg) {
-							logger.info("Retrieve egg type name");
-						}
-
-						try {
-							eggName = eggMeta.getDisplayName();
-						} catch (Exception e) {
-							e.printStackTrace();
-							eggName = "Undefined";
-						}
-
-						if (showDebugForEgg) {
-							if (eggName == null)
-								logger.info("eggMeta.getDisplayName() returned null");
-							else
-								logger.info("eggName is: " + eggName);
-						}
-
-						result.SpawnEgg = true;
-						result.SpawnType = eggSpawnType;
-
-						eggDebugMessageCount++;
 					}
 
 					// Is this an enchanted book?
