@@ -522,7 +522,7 @@ public class MarketSearch extends JavaPlugin {
 		return Lookup.findItemByName(name);
 	}
 
-	private String InitialCaps(String itemName) {
+	public static String InitialCaps(String itemName) {
 		String[] parts = itemName.split("_");
 		StringBuilder itemNameInitialCaps = new StringBuilder();
 

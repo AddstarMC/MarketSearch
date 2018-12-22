@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import static au.com.addstar.marketsearch.MarketSearch.InitialCaps;
+
 class CommandListener implements CommandExecutor {
 	private final MarketSearch plugin;
 
@@ -137,18 +139,21 @@ class CommandListener implements CommandExecutor {
 					int perPage = 10;
 					int pages = (int) Math.ceil((double) results.size() / perPage);
 
+					String initialCapsName = InitialCaps(searchfor.name());
+
 					if (page > pages) {
 						if (page > 1)
-							sender.sendMessage(ChatColor.RED + "No more results found for " + searchfor.name() + "; try page " + (page - 1));
+							sender.sendMessage(ChatColor.RED + "No more results found; " +
+									"use /ms find " + initialCapsName + " " + (page - 1));
 						else
-							sender.sendMessage(ChatColor.RED + "Sorry, no results found for " + searchfor.name());
+							sender.sendMessage(ChatColor.RED + "Sorry, no results found for " + initialCapsName);
 						return true;
 					}
 
 					Set<String> names = Lookup.findNameByItem(searchfor);
-					plugin.Debug(searchfor.name() + " aliases: " + String.join(", ", names));
+					plugin.Debug(initialCapsName + " aliases: " + String.join(", ", names));
 					sender.sendMessage(ChatColor.GREEN + "Page " + page + "/" + pages + ": " +
-							ChatColor.YELLOW + "(" + searchfor.name() + ") " +
+							ChatColor.YELLOW + "(" + initialCapsName + ") " +
 							ChatColor.WHITE + StringUtils.join(names, ", "));
 
 					if (results.size() > 0) {
@@ -195,9 +200,9 @@ class CommandListener implements CommandExecutor {
 						}
 					} else {
 						if (action.equals("SELL")) {
-							sender.sendMessage(ChatColor.RED + "Sorry, there are no shops buying " + searchfor.name());
+							sender.sendMessage(ChatColor.RED + "Sorry, there are no shops buying " + initialCapsName);
 						} else {
-							sender.sendMessage(ChatColor.RED + "Sorry, no stock available in any shop for " + searchfor.name());
+							sender.sendMessage(ChatColor.RED + "Sorry, no stock available in any shop for " + initialCapsName);
 						}
 					}
 				} else {
