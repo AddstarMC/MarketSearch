@@ -391,6 +391,8 @@ public class MarketSearch extends JavaPlugin {
 		EnchantMap.put(Enchantment.ARROW_FIRE, "fire");
 		EnchantMap.put(Enchantment.ARROW_INFINITE, "inf");
 		EnchantMap.put(Enchantment.ARROW_KNOCKBACK, "knock");
+		EnchantMap.put(Enchantment.BINDING_CURSE, "binding");
+		EnchantMap.put(Enchantment.CHANNELING, "channel");
 		EnchantMap.put(Enchantment.DAMAGE_ALL, "dmg");
 		EnchantMap.put(Enchantment.DAMAGE_ARTHROPODS, "bane");
 		EnchantMap.put(Enchantment.DAMAGE_UNDEAD, "smite");
@@ -399,9 +401,11 @@ public class MarketSearch extends JavaPlugin {
 		EnchantMap.put(Enchantment.DURABILITY, "dura");
 		EnchantMap.put(Enchantment.FIRE_ASPECT, "fire");
 		EnchantMap.put(Enchantment.FROST_WALKER, "frost");
+		EnchantMap.put(Enchantment.IMPALING, "impale");
 		EnchantMap.put(Enchantment.KNOCKBACK, "knock");
 		EnchantMap.put(Enchantment.LOOT_BONUS_BLOCKS, "fort");
 		EnchantMap.put(Enchantment.LOOT_BONUS_MOBS, "fort");
+		EnchantMap.put(Enchantment.LOYALTY, "loyal");
 		EnchantMap.put(Enchantment.LUCK, "luck");
 		EnchantMap.put(Enchantment.LURE, "lure");
 		EnchantMap.put(Enchantment.MENDING, "mend");
@@ -411,8 +415,11 @@ public class MarketSearch extends JavaPlugin {
 		EnchantMap.put(Enchantment.PROTECTION_FALL, "fall");
 		EnchantMap.put(Enchantment.PROTECTION_FIRE, "fireprot");
 		EnchantMap.put(Enchantment.PROTECTION_PROJECTILE, "proj");
+		EnchantMap.put(Enchantment.RIPTIDE, "rip");
 		EnchantMap.put(Enchantment.SILK_TOUCH, "silk");
+		EnchantMap.put(Enchantment.SWEEPING_EDGE, "sweep");
 		EnchantMap.put(Enchantment.THORNS, "thorn");
+		EnchantMap.put(Enchantment.VANISHING_CURSE, "vanish");
 		EnchantMap.put(Enchantment.WATER_WORKER, "aqua");
 	}
 
