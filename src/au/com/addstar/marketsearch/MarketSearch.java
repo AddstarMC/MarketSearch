@@ -469,27 +469,44 @@ public class MarketSearch extends JavaPlugin {
 	private String[] getSearchParts(String search) {
 		// Split on the colon
 		String[] parts = search.split(":");
-		String itemname = parts[0];
+		String itemName = parts[0];
+		String itemEnchant;
 
-		// Auto-change carrot to carrot_item (ID 391) and potato to potato_item (ID 392)
-		if (itemname.equalsIgnoreCase("carrot"))
-			parts[0] = "CARROT_ITEM";
+		if (parts.length > 1 && !StringUtils.isNumeric(parts[1]))
+			itemEnchant = parts[1];
+		else
+			itemEnchant = "";
 
-		if (itemname.equalsIgnoreCase("potato"))
-			parts[0] = "POTATO_ITEM";
+		// Auto-change carrots to carrots and potatoes to potato
+		if (itemName.equalsIgnoreCase("carrots"))
+			parts[0] = "CARROT";
 
-		// Auto-change spawn_egg to monster_egg
-		if (itemname.equalsIgnoreCase("spawn_egg"))
-			parts[0] = "MONSTER_EGG";
+		if (itemName.equalsIgnoreCase("potatoes"))
+			parts[0] = "POTATO";
 
-		// Auto-change some potion search terms
-		// Splash potion
-		if (itemname.contains("splash"))
-			parts[0] = "438";
+		if (itemName.equalsIgnoreCase("diamond_pick"))
+			parts[0] = "DIAMOND_PICKAXE";
 
-		// Lingering potion
-		if (itemname.contains("linger"))
-			parts[0] = "441";
+		if (itemEnchant.equalsIgnoreCase("efficiency"))
+			parts[1] = "eff";
+
+		if (itemEnchant.equalsIgnoreCase("fortune"))
+			parts[1] = "fort";
+
+		if (itemEnchant.equalsIgnoreCase("respiration"))
+			parts[1] = "air";
+
+		if (itemEnchant.equalsIgnoreCase("sharpness"))
+			parts[1] = "dmg";
+
+		if (itemEnchant.equalsIgnoreCase("silktouch"))
+			parts[1] = "silk";
+
+		if (itemEnchant.equalsIgnoreCase("silk_touch"))
+			parts[1] = "silk";
+
+		if (itemEnchant.equalsIgnoreCase("unbreaking"))
+			parts[1] = "dura";
 
 		return parts;
 	}
@@ -500,7 +517,6 @@ public class MarketSearch extends JavaPlugin {
 		Material mat = Material.getMaterial(name.toUpperCase());
 		if (mat != null)
             return mat;
-
 
 		// ItemDB
 		return Lookup.findItemByName(name);
