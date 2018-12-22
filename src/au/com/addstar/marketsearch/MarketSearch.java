@@ -186,16 +186,42 @@ public class MarketSearch extends JavaPlugin {
 		List<ShopResult> results = new ArrayList<>();
 		HashMap<ShopChunk, HashMap<Location, Shop>> map = QSSM.getShops(MarketWorld);
 
+		int maxDetailedCount = 50;
+		int wrongItemCount = 0;
+		int noStockCount = 0;
+		int noSpaceCount = 0;
+
+		Material itemType = SearchItem.getType();
+
 		if (map != null) {
+
+			if (DebugEnabled) {
+				Debug("Searching shops for item " + getItemDetails(SearchItem));
+			}
+
 			for (Entry<ShopChunk, HashMap<Location, Shop>> chunks : map.entrySet()) {
 
 				for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
 					Shop shop = inChunk.getValue();
 					ItemStack shopItem = shop.getItem();
 
-					if (shopItem.getType() != SearchItem.getType()) {
+					if (shopItem.getType() != itemType) {
+						// Wrong item
+						if (DebugEnabled) {
+							wrongItemCount++;
+							if (wrongItemCount <= maxDetailedCount && DebugLevel > 1) {
+								logger.info("No match to " + shopItem.getType().name() + " in shop at " +
+										shop.getLocation().getBlockX() + " " +
+										shop.getLocation().getBlockY() + " " +
+										shop.getLocation().getBlockZ());
+
+								if (wrongItemCount == maxDetailedCount) {
+									logger.info(" ... max wrong item count limit reached; no more items will be logged");
+								}
+							}
+						}
 						continue;
-					}    // Wrong item
+					}
 
 					// Durability is deprecated in 1.13
 					//
@@ -207,14 +233,49 @@ public class MarketSearch extends JavaPlugin {
 					// }
 
 					if (SearchType == ShopType.SELLING && shop.getRemainingStock() == 0) {
+						// No stock
+						if (DebugEnabled) {
+							noStockCount++;
+							if (noStockCount <= maxDetailedCount) {
+								logger.info("Match found, but no stock in shop at " +
+										shop.getLocation().getBlockX() + " " +
+										shop.getLocation().getBlockY() + " " +
+										shop.getLocation().getBlockZ() + ", shop item " + getItemDetails(shopItem));
+
+								if (noStockCount == maxDetailedCount) {
+									logger.info(" ... max no stock count limit reached; no more items will be logged");
+								}
+							}
+						}
 						continue;
-					}    // No stock
+					}
 					if (SearchType == ShopType.BUYING && shop.getRemainingSpace() == 0) {
+						// No space
+						if (DebugEnabled) {
+							noSpaceCount++;
+							if (noSpaceCount <= maxDetailedCount) {
+								logger.info("Match found, but no space to buy item in shop at " +
+										shop.getLocation().getBlockX() + " " +
+										shop.getLocation().getBlockY() + " " +
+										shop.getLocation().getBlockZ() + ", shop item " + getItemDetails(shopItem));
+
+								if (noSpaceCount == maxDetailedCount) {
+									logger.info(" ... max no space count limit reached; no more items will be logged");
+								}
+							}
+						}
 						continue;
-					}    // No space
+					}
 					if (shop.getShopType() != SearchType) {
 						// Wrong shop type
 						continue;
+					}
+
+					if (DebugEnabled) {
+						logger.info("Match found, in shop at " +
+								shop.getLocation().getBlockX() + " " +
+								shop.getLocation().getBlockY() + " " +
+								shop.getLocation().getBlockZ() + "; storing");
 					}
 
 					ShopResult result = StoreResult(shop);
@@ -265,7 +326,10 @@ public class MarketSearch extends JavaPlugin {
 		}
 
 		if (DebugEnabled) {
-			logger.info("Sorting " + results.size() + " results for item " + SearchItem.getType().name());
+			if (results.size() == 0)
+				logger.info("No results for item " + itemType.name());
+			else
+				logger.info("Sorting " + results.size() + " results for item " + itemType.name());
 		}
 
 		// Order results here
@@ -322,7 +386,7 @@ public class MarketSearch extends JavaPlugin {
         // Return sorted string list
         return StringUtils.join(elist.toArray(), "/");
 	}
-	
+
 	private void LoadEnchants() {
         EnchantMap.clear();
 		EnchantMap.put(Enchantment.ARROW_DAMAGE, "dmg");
@@ -353,7 +417,25 @@ public class MarketSearch extends JavaPlugin {
 		EnchantMap.put(Enchantment.THORNS, "thorn");
 		EnchantMap.put(Enchantment.WATER_WORKER, "aqua");
 	}
-	
+
+	private String getItemDetails(ItemStack item) {
+		Material itemType = item.getType();
+		String description = itemType.name();
+
+		if (item.hasItemMeta()) {
+			ItemMeta shopItemMeta = item.getItemMeta();
+			Map<Enchantment, Integer> enchants = shopItemMeta.getEnchants();
+
+			for (final Entry<Enchantment, Integer> entries : enchants.entrySet()) {
+				description += ", enchantment: " +
+						entries.getKey().getKey() + " " +
+						entries.getValue();
+			}
+		}
+
+		return description;
+	}
+
 	private void Log(String data) {
 		logger.info(pdfFile.getName() + " " + data);
 	}
