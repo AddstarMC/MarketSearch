@@ -74,6 +74,7 @@ public class MarketSearch extends JavaPlugin {
 		Map<Enchantment, Integer> Enchants = null;
 		Boolean Potion = false;
 		String PotionType = null;
+		Location ShopLocation;
 	}
 	
 	@Override
@@ -317,6 +318,9 @@ public class MarketSearch extends JavaPlugin {
 					} else {
 						Warn("Unable to find plot! " + shop.getLocation().toString());
 					}
+
+					// Store the shop location so we can teleport the player later
+					result.ShopLocation = shop.getLocation();
 				}
 			}
 		}else{
@@ -441,11 +445,11 @@ public class MarketSearch extends JavaPlugin {
 		return description;
 	}
 
-	private void Log(String data) {
+	public void Log(String data) {
 		logger.info(pdfFile.getName() + " " + data);
 	}
 
-	private void Warn(String data) {
+	public void Warn(String data) {
 		logger.warning(pdfFile.getName() + " " + data);
 	}
 	

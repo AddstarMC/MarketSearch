@@ -4,14 +4,28 @@ import au.com.addstar.marketsearch.MarketSearch.ShopResult;
 import au.com.addstar.marketsearch.MarketSearch.ShopResultSort;
 import au.com.addstar.monolith.lookup.Lookup;
 import com.google.common.base.Strings;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.apache.commons.lang.StringUtils;
-import org.bukkit.ChatColor;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Chest;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Directional;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 import org.maxgamer.QuickShop.Shop.ShopType;
 
 import java.util.ArrayList;
@@ -192,11 +206,25 @@ class CommandListener implements CommandExecutor {
 								stockdisplay = ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + result.Stock + " left" + ChatColor.DARK_GREEN + ")";
 							}
 
-							sender.sendMessage(
-									ChatColor.GREEN + " - " + ownerstr +
-											ChatColor.GREEN + ": " +
-											ChatColor.YELLOW + "$" + result.Price + extraInfo +
-											ChatColor.GREEN + " " + stockdisplay);
+							ComponentBuilder row = new ComponentBuilder(" - ").color(ChatColor.GREEN);
+							row.event(new ClickEvent(
+									ClickEvent.Action.RUN_COMMAND,
+										"/ms tpto " +
+											result.ShopOwner + " " +
+											result.ShopLocation.getWorld().getName() + " " +
+											result.ShopLocation.getBlockX() + " " +
+											result.ShopLocation.getBlockY() + " " +
+											result.ShopLocation.getBlockZ()));
+							row.event(new HoverEvent(
+									HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(
+										"Click to teleport to " + result.ShopOwner + "'s shop")
+											.color(ChatColor.DARK_PURPLE)
+											.italic(true)
+											.create()));
+							row.append(ownerstr + " ").color(ChatColor.GREEN);
+							row.append("$" + result.Price + extraInfo).color(ChatColor.YELLOW);
+							row.append(" " + stockdisplay).color(ChatColor.GREEN);
+							sender.spigot().sendMessage(row.create());
 						}
 					} else {
 						if (action.equals("SELL")) {
@@ -322,6 +350,62 @@ class CommandListener implements CommandExecutor {
 				}
 				break;
 
+			case "TPTO":
+				if ((sender instanceof Player)) {
+					if (!plugin.RequirePermission((Player) sender, "marketsearch.tpto")) {
+						return false;
+					}
+				} else {
+					sender.sendMessage(ChatColor.RED + "This command cannot be run from console");
+					return true;
+				}
+
+				if (args.length >= 6) {
+					sender.sendMessage(ChatColor.LIGHT_PURPLE + "Teleporting you to " + args[1] + "'s shop...");
+
+					// Get location of market shop
+					World w = Bukkit.getWorld(args[2]);
+					double x = Double.valueOf(args[3]);
+					double y = Double.valueOf(args[4]);
+					double z = Double.valueOf(args[5]);
+					Location loc = new Location(w, x, y, z);
+					Block b = loc.getBlock();
+
+					// If it's still a chest, we teleport to the player to the location in front of the chest
+					if (b.getType() == Material.CHEST) {
+						BlockFace bf = ((Directional) b.getBlockData()).getFacing();
+						Block sign = b.getRelative(bf);
+						Location signloc = sign.getLocation();
+						signloc.setDirection(bf.getOppositeFace().getDirection());
+						signloc.add(0.5, 0, 0.5);
+
+						Location tmp = signloc.clone();
+						if (tmp.add(0, 1, 0).getBlock().isEmpty()) {
+							Player player = Bukkit.getPlayer(sender.getName());
+							player.teleport(signloc);
+						} else {
+							sender.sendMessage(ChatColor.RED + "Sorry, unable to find a clear location to send you to.");
+							plugin.Warn("Error: Unable to find clear location in at: " +
+									signloc.getWorld().getName() + " " +
+									signloc.getBlockX() + " " +
+									signloc.getBlockY() + " " +
+									signloc.getBlockZ()
+							);
+							return true;
+						}
+					} else {
+						sender.sendMessage(ChatColor.RED + "Sorry, unable to find that shop.");
+						plugin.Warn("Error: Unable to find shop at: " +
+								loc.getWorld().getName() + " " +
+								loc.getBlockX() + " " +
+								loc.getBlockY() + " " +
+								loc.getBlockZ()
+						);
+						return true;
+					}
+				}
+				break;
+
 			case "REPORT":
 				if ((sender instanceof Player)) {
 					if (!plugin.RequirePermission((Player) sender, "marketsearch.report")) {
@@ -329,6 +413,7 @@ class CommandListener implements CommandExecutor {
 					}
 				}
 				break;
+
 			case "DEBUG":
 				if ((sender instanceof Player)) {
 					if (!plugin.RequirePermission((Player) sender, "marketsearch.debug")) {
