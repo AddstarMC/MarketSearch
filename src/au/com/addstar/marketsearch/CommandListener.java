@@ -221,10 +221,19 @@ class CommandListener implements CommandExecutor {
 											.color(ChatColor.DARK_PURPLE)
 											.italic(true)
 											.create()));
-							row.append(ownerstr + " ").color(ChatColor.GREEN);
-							row.append("$" + result.Price + extraInfo).color(ChatColor.YELLOW);
-							row.append(" " + stockdisplay).color(ChatColor.GREEN);
-							sender.spigot().sendMessage(row.create());
+
+							if (sender instanceof Player) {
+								// Only send the basecomponent to players
+								row.append(ownerstr + " ").color(ChatColor.GREEN);
+								row.append("$" + result.Price + extraInfo).color(ChatColor.YELLOW);
+								row.append(" " + stockdisplay).color(ChatColor.GREEN);
+								sender.spigot().sendMessage(row.create());
+							} else {
+								// Output raw messages to console
+								sender.sendMessage(ChatColor.GREEN + ownerstr + " " +
+									ChatColor.YELLOW + "$" + result.Price + extraInfo +
+									ChatColor.GREEN + " " + stockdisplay);
+							}
 						}
 					} else {
 						if (action.equals("SELL")) {
