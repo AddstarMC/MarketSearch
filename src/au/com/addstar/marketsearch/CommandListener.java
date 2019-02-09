@@ -372,7 +372,7 @@ class CommandListener implements CommandExecutor {
 					Block b = loc.getBlock();
 
 					// If it's still a chest, we teleport to the player to the location in front of the chest
-					if (b.getType() == Material.CHEST) {
+					if ((b.getType() == Material.CHEST) || (b.getType() == Material.TRAPPED_CHEST)) {
 						BlockFace bf = ((Directional) b.getBlockData()).getFacing();
 						Block sign = b.getRelative(bf);
 						Location signloc = sign.getLocation();
