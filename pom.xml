@@ -79,13 +79,17 @@
             <id>spigot-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
+        <!--        <repository>
+                    <id>uSkyBlock-mvn-repo</id>
+                    <url>https://raw.github.com/rlf/uSkyBlock/mvn-repo/</url>
+                    <snapshots>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                </repository>-->
         <repository>
-            <id>uSkyBlock-mvn-repo</id>
-            <url>https://raw.github.com/rlf/uSkyBlock/mvn-repo/</url>
-            <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
-            </snapshots>
+            <id>plotsquared-4</id>
+            <url>http://ci.athion.net/job/PlotSquared-Breaking/ws/mvn/</url>
         </repository>
     </repositories>
 
@@ -93,7 +97,7 @@
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.13.2-R0.1-SNAPSHOT</version>
+            <version>1.14-pre5-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -110,16 +114,16 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.intellectualcrafters</groupId>
-            <artifactId>PlotSquared</artifactId>
-            <version>3.5.1-SNAPSHOT</version>
+            <groupId>com.github.intellectualsites.plotsquared</groupId>
+            <artifactId>Plotsquared-Api</artifactId>
+            <version>4.176</version>
             <optional>true</optional>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.github.rlf</groupId>
             <artifactId>uSkyBlock-API</artifactId>
-            <version>2.6.4</version>
+            <version>2.7.5</version>
             <optional>true</optional>
             <scope>provided</scope>
         </dependency>
