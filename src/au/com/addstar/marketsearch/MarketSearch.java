@@ -14,12 +14,10 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.SpawnEggMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
@@ -44,7 +42,16 @@ public class MarketSearch extends JavaPlugin {
 		DebugEnabled = debugEnabled;
 	}
 
+	public void setDebugEnabled(boolean debugEnabled, int debugLevel) {
+		DebugEnabled = debugEnabled;
+		DebugLevel = debugLevel;
+	}
+
 	private boolean DebugEnabled = false;
+
+	// Higher numbers lead to more debug messages
+	private int DebugLevel = 1;
+
 	private String MarketWorld = null;
 	private ShopManager QSSM = null;
 	private PlotProvider plotProvider;
@@ -67,8 +74,7 @@ public class MarketSearch extends JavaPlugin {
 		Map<Enchantment, Integer> Enchants = null;
 		Boolean Potion = false;
 		String PotionType = null;
-		Boolean SpawnEgg = false;
-		EntityType SpawnType = EntityType.CHICKEN;
+		Location ShopLocation;
 	}
 	
 	@Override
@@ -179,36 +185,97 @@ public class MarketSearch extends JavaPlugin {
 		List<ShopResult> results = new ArrayList<>();
 		HashMap<ShopChunk, HashMap<Location, Shop>> map = QSSM.getShops(MarketWorld);
 
-		int eggDebugMessageCount = 0;
-		int eggDebugMessageLimit = 3;
+		int maxDetailedCount = 50;
+		int wrongItemCount = 0;
+		int noStockCount = 0;
+		int noSpaceCount = 0;
 
-		if (map !=null) {
+		Material itemType = SearchItem.getType();
+
+		if (map != null) {
+
+			if (DebugEnabled) {
+				Debug("Searching shops for item " + getItemDetails(SearchItem));
+			}
+
 			for (Entry<ShopChunk, HashMap<Location, Shop>> chunks : map.entrySet()) {
 
 				for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
 					Shop shop = inChunk.getValue();
 					ItemStack shopItem = shop.getItem();
 
-					if (shopItem.getType() != SearchItem.getType()) {
-						continue;
-					}    // Wrong item
+					if (shopItem.getType() != itemType) {
+						// Wrong item
+						if (DebugEnabled) {
+							wrongItemCount++;
+							if (wrongItemCount <= maxDetailedCount && DebugLevel > 1) {
+								logger.info("No match to " + shopItem.getType().name() + " in shop at " +
+										shop.getLocation().getBlockX() + " " +
+										shop.getLocation().getBlockY() + " " +
+										shop.getLocation().getBlockZ());
 
-					// Only compare data/durability for items with no real durability (blocks, etc)
-					if (SearchItem.getType().getMaxDurability() == 0) {
-						if (shopItem.getDurability() != SearchItem.getDurability()) {
-							continue;
+								if (wrongItemCount == maxDetailedCount) {
+									logger.info(" ... max wrong item count limit reached; no more items will be logged");
+								}
+							}
 						}
+						continue;
 					}
 
+					// Durability is deprecated in 1.13
+					//
+					// Only compare data/durability for items with no real durability (blocks, etc)
+					// if (SearchItem.getType().getMaxDurability() == 0) {
+					// 	if (shopItem.getDurability() != SearchItem.getDurability()) {
+					// 		continue;
+					// 	}
+					// }
+
 					if (SearchType == ShopType.SELLING && shop.getRemainingStock() == 0) {
+						// No stock
+						if (DebugEnabled) {
+							noStockCount++;
+							if (noStockCount <= maxDetailedCount) {
+								logger.info("Match found, but no stock in shop at " +
+										shop.getLocation().getBlockX() + " " +
+										shop.getLocation().getBlockY() + " " +
+										shop.getLocation().getBlockZ() + ", shop item " + getItemDetails(shopItem));
+
+								if (noStockCount == maxDetailedCount) {
+									logger.info(" ... max no stock count limit reached; no more items will be logged");
+								}
+							}
+						}
 						continue;
-					}    // No stock
+					}
 					if (SearchType == ShopType.BUYING && shop.getRemainingSpace() == 0) {
+						// No space
+						if (DebugEnabled) {
+							noSpaceCount++;
+							if (noSpaceCount <= maxDetailedCount) {
+								logger.info("Match found, but no space to buy item in shop at " +
+										shop.getLocation().getBlockX() + " " +
+										shop.getLocation().getBlockY() + " " +
+										shop.getLocation().getBlockZ() + ", shop item " + getItemDetails(shopItem));
+
+								if (noSpaceCount == maxDetailedCount) {
+									logger.info(" ... max no space count limit reached; no more items will be logged");
+								}
+							}
+						}
 						continue;
-					}    // No space
+					}
 					if (shop.getShopType() != SearchType) {
+						// Wrong shop type
 						continue;
-					}                                    // Wrong shop type
+					}
+
+					if (DebugEnabled) {
+						logger.info("Match found, in shop at " +
+								shop.getLocation().getBlockX() + " " +
+								shop.getLocation().getBlockY() + " " +
+								shop.getLocation().getBlockZ() + "; storing");
+					}
 
 					ShopResult result = StoreResult(shop);
 
@@ -218,124 +285,63 @@ public class MarketSearch extends JavaPlugin {
 						result.Enchanted = true;
 					}
 
-					// Is this a spawn egg?
-                    if (shopItem.getItemMeta() instanceof SpawnEggMeta) {
+					// Is this an enchanted book?
+					if (shopItem.getType() == Material.ENCHANTED_BOOK) {
 
-						ItemMeta itemMeta = shopItem.getItemMeta();
-						SpawnEggMeta eggMeta = null;
+						EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta) shopItem.getItemMeta();
 
-						boolean showDebugForEgg = (DebugEnabled && eggDebugMessageCount <= eggDebugMessageLimit);
-
-						if (showDebugForEgg) {
-							logger.info("Retrieve SpawnEggMeta for " + shopItem.toString());
-							logger.info("TryCast " + itemMeta.toString());
-						}
-
-						try {
-							eggMeta = (SpawnEggMeta) itemMeta;
-						} catch (ClassCastException e) {
-							e.printStackTrace();
-						}
-
-						EntityType eggSpawnType;
-						String eggName;
-
-						if (showDebugForEgg) {
-							if (eggMeta == null)
-								logger.info("Cast (SpawnEggMeta) itemMeta returned null");
-							else
-								logger.info("Determine entity type using " + eggMeta);
-						}
-
-						try {
-							eggSpawnType = eggMeta.getSpawnedType();
-						} catch (Exception e) {
-							e.printStackTrace();
-							eggSpawnType = EntityType.CHICKEN;
-						}
-
-						if (showDebugForEgg) {
-							if (eggSpawnType == null)
-								logger.info("eggMeta.getSpawnedType() returned null");
-							else
-								logger.info("EggSpawnType is " + eggSpawnType);
-						}
-
-						if (showDebugForEgg) {
-							logger.info("Retrieve egg type name");
-						}
-
-						try {
-							eggName = eggMeta.getDisplayName();
-						} catch (Exception e) {
-							e.printStackTrace();
-							eggName = "Undefined";
-						}
-
-						if (showDebugForEgg) {
-							if (eggName == null)
-								logger.info("eggMeta.getDisplayName() returned null");
-							else
-								logger.info("eggName is: " + eggName);
-						}
-
-						result.SpawnEgg = true;
-						result.SpawnType = eggSpawnType;
-
-						eggDebugMessageCount++;
-					}
-
-						// Is this an enchanted book?
-						if (shopItem.getType() == Material.ENCHANTED_BOOK) {
-
-							EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta) shopItem.getItemMeta();
-
-							if (bookMeta.hasStoredEnchants()) {
-								// Store the enchantment(s)
-								result.Enchanted = true;
-								result.Enchants = bookMeta.getStoredEnchants();
-							} else {
-								if (DebugEnabled) {
-									logger.info("No stored enchants on book");
-								}
+						if (bookMeta.hasStoredEnchants()) {
+							// Store the enchantment(s)
+							result.Enchanted = true;
+							result.Enchants = bookMeta.getStoredEnchants();
+						} else {
+							if (DebugEnabled) {
+								logger.info("No stored enchants on book");
 							}
 						}
-
-						// Is this a potion?
-						if (shopItem.getType() == Material.POTION ||
-								shopItem.getType() == Material.SPLASH_POTION ||
-								shopItem.getType() == Material.LINGERING_POTION) {
-
-							PotionUtil potion = PotionUtil.fromItemStack(shopItem);
-							result.Potion = true;
-							result.PotionType = potion.toString();
-						}
-
-						String owner = plotProvider.getPlotOwner(shop.getLocation());
-						if (owner != null) {
-							result.PlotOwner = owner;
-							results.add(result);
-						} else {
-							Warn("Unable to find plot! " + shop.getLocation().toString());
-						}
 					}
+
+					// Is this a potion?
+					if (shopItem.getType() == Material.POTION ||
+							shopItem.getType() == Material.SPLASH_POTION ||
+							shopItem.getType() == Material.LINGERING_POTION) {
+
+						PotionUtil potion = PotionUtil.fromItemStack(shopItem);
+						result.Potion = true;
+						result.PotionType = potion.toString();
+					}
+
+					String owner = plotProvider.getPlotOwner(shop.getLocation());
+					if (owner != null) {
+						result.PlotOwner = owner;
+						results.add(result);
+					} else {
+						Warn("Unable to find plot! " + shop.getLocation().toString());
+					}
+
+					// Store the shop location so we can teleport the player later
+					result.ShopLocation = shop.getLocation();
 				}
-			}else{
-				Warn("Quickshop returned NO Shops");
 			}
-
-			if (DebugEnabled) {
-				logger.info("Sorting " + results.size() + " results for item " + SearchItem.getType().name());
-			}
-
-			// Order results here
-			if (SearchType == ShopType.SELLING) {
-				results.sort(ShopResultSort.ByPrice);
-			} else {
-				results.sort(ShopResultSort.ByPriceDescending);
-			}
-			return results;
+		}else{
+			Warn("Quickshop returned NO Shops");
 		}
+
+		if (DebugEnabled) {
+			if (results.size() == 0)
+				logger.info("No results for item " + itemType.name());
+			else
+				logger.info("Sorting " + results.size() + " results for item " + itemType.name());
+		}
+
+		// Order results here
+		if (SearchType == ShopType.SELLING) {
+			results.sort(ShopResultSort.ByPrice);
+		} else {
+			results.sort(ShopResultSort.ByPriceDescending);
+		}
+		return results;
+	}
 
 	public List<ShopResult> getPlayerShops(String player) {
 
@@ -382,14 +388,16 @@ public class MarketSearch extends JavaPlugin {
         // Return sorted string list
         return StringUtils.join(elist.toArray(), "/");
 	}
-	
+
 	private void LoadEnchants() {
         EnchantMap.clear();
-		EnchantMap.put(Enchantment.ARROW_DAMAGE, "dmg");
-		EnchantMap.put(Enchantment.ARROW_FIRE, "fire");
+		EnchantMap.put(Enchantment.ARROW_DAMAGE, "pierce");
+		EnchantMap.put(Enchantment.ARROW_FIRE, "flame");
 		EnchantMap.put(Enchantment.ARROW_INFINITE, "inf");
-		EnchantMap.put(Enchantment.ARROW_KNOCKBACK, "knock");
-		EnchantMap.put(Enchantment.DAMAGE_ALL, "dmg");
+		EnchantMap.put(Enchantment.ARROW_KNOCKBACK, "punch");
+		EnchantMap.put(Enchantment.BINDING_CURSE, "binding");
+		EnchantMap.put(Enchantment.CHANNELING, "channel");
+		EnchantMap.put(Enchantment.DAMAGE_ALL, "dmg");		// Sharpness
 		EnchantMap.put(Enchantment.DAMAGE_ARTHROPODS, "bane");
 		EnchantMap.put(Enchantment.DAMAGE_UNDEAD, "smite");
 		EnchantMap.put(Enchantment.DEPTH_STRIDER, "strider");
@@ -397,9 +405,11 @@ public class MarketSearch extends JavaPlugin {
 		EnchantMap.put(Enchantment.DURABILITY, "dura");
 		EnchantMap.put(Enchantment.FIRE_ASPECT, "fire");
 		EnchantMap.put(Enchantment.FROST_WALKER, "frost");
+		EnchantMap.put(Enchantment.IMPALING, "impale");
 		EnchantMap.put(Enchantment.KNOCKBACK, "knock");
 		EnchantMap.put(Enchantment.LOOT_BONUS_BLOCKS, "fort");
-		EnchantMap.put(Enchantment.LOOT_BONUS_MOBS, "fort");
+		EnchantMap.put(Enchantment.LOOT_BONUS_MOBS, "loot");
+		EnchantMap.put(Enchantment.LOYALTY, "loyal");
 		EnchantMap.put(Enchantment.LUCK, "luck");
 		EnchantMap.put(Enchantment.LURE, "lure");
 		EnchantMap.put(Enchantment.MENDING, "mend");
@@ -409,16 +419,37 @@ public class MarketSearch extends JavaPlugin {
 		EnchantMap.put(Enchantment.PROTECTION_FALL, "fall");
 		EnchantMap.put(Enchantment.PROTECTION_FIRE, "fireprot");
 		EnchantMap.put(Enchantment.PROTECTION_PROJECTILE, "proj");
+		EnchantMap.put(Enchantment.RIPTIDE, "rip");
 		EnchantMap.put(Enchantment.SILK_TOUCH, "silk");
+		EnchantMap.put(Enchantment.SWEEPING_EDGE, "sweep");
 		EnchantMap.put(Enchantment.THORNS, "thorn");
+		EnchantMap.put(Enchantment.VANISHING_CURSE, "vanish");
 		EnchantMap.put(Enchantment.WATER_WORKER, "aqua");
 	}
-	
-	private void Log(String data) {
+
+	private String getItemDetails(ItemStack item) {
+		Material itemType = item.getType();
+		String description = itemType.name();
+
+		if (item.hasItemMeta()) {
+			ItemMeta shopItemMeta = item.getItemMeta();
+			Map<Enchantment, Integer> enchants = shopItemMeta.getEnchants();
+
+			for (final Entry<Enchantment, Integer> entries : enchants.entrySet()) {
+				description += ", enchantment: " +
+						entries.getKey().getKey() + " " +
+						entries.getValue();
+			}
+		}
+
+		return description;
+	}
+
+	public void Log(String data) {
 		logger.info(pdfFile.getName() + " " + data);
 	}
 
-	private void Warn(String data) {
+	public void Warn(String data) {
 		logger.warning(pdfFile.getName() + " " + data);
 	}
 	
@@ -489,21 +520,23 @@ public class MarketSearch extends JavaPlugin {
 		}
 		if(!(sender instanceof Player) || (HasPermission((Player) sender, "marketsearch.debug"))) {
 			sender.sendMessage(ChatColor.AQUA + "/ms debug :" + ChatColor.WHITE + " Switch debugging on and off as a toggle");
+			sender.sendMessage(ChatColor.AQUA + "/ms debug 1 :" + ChatColor.WHITE + " When enabling debug, optionally use 1 for normal logging");
+			sender.sendMessage(ChatColor.AQUA + "/ms debug 2 :" + ChatColor.WHITE + " Use 2 for detailed logging");
 		}
 	}
 
     public Material getItem(String search)
 	{
 		// Split the search term on the colon to obtain the material name and optionally a data value or text filter
-		// The data value could be an integer for item data, or text to filter on
-		// The data value is not required to ber present
+		// The data value could text to filter on, e.g. diamond_sword:fire or diamond_shovel:eff
+		// The data value is not required to be present
 
 		String[] parts = getSearchParts(search);
-		String itemname = parts[0];
+		String itemName = parts[0];
 
-        Material def = getMaterial(itemname);
+        Material def = getMaterial(itemName);
 		if (def == null) {
-			Debug("Warning: getMaterial() returned null for: " + itemname);
+			Debug("Warning: getMaterial() returned null for: " + itemName);
 			return null;
 		}
 		Debug("getMaterial returned: " + def.name());
@@ -538,27 +571,44 @@ public class MarketSearch extends JavaPlugin {
 	private String[] getSearchParts(String search) {
 		// Split on the colon
 		String[] parts = search.split(":");
-		String itemname = parts[0];
+		String itemName = parts[0];
+		String itemEnchant;
 
-		// Auto-change carrot to carrot_item (ID 391) and potato to potato_item (ID 392)
-		if (itemname.equalsIgnoreCase("carrot"))
-			parts[0] = "CARROT_ITEM";
+		if (parts.length > 1 && !StringUtils.isNumeric(parts[1]))
+			itemEnchant = parts[1];
+		else
+			itemEnchant = "";
 
-		if (itemname.equalsIgnoreCase("potato"))
-			parts[0] = "POTATO_ITEM";
+		// Auto-change carrots to carrots and potatoes to potato
+		if (itemName.equalsIgnoreCase("carrots"))
+			parts[0] = "CARROT";
 
-		// Auto-change spawn_egg to monster_egg
-		if (itemname.equalsIgnoreCase("spawn_egg"))
-			parts[0] = "MONSTER_EGG";
+		if (itemName.equalsIgnoreCase("potatoes"))
+			parts[0] = "POTATO";
 
-		// Auto-change some potion search terms
-		// Splash potion
-		if (itemname.contains("splash"))
-			parts[0] = "438";
+		if (itemName.equalsIgnoreCase("diamond_pick"))
+			parts[0] = "DIAMOND_PICKAXE";
 
-		// Lingering potion
-		if (itemname.contains("linger"))
-			parts[0] = "441";
+		if (itemEnchant.equalsIgnoreCase("efficiency"))
+			parts[1] = "eff";
+
+		if (itemEnchant.equalsIgnoreCase("fortune"))
+			parts[1] = "fort";
+
+		if (itemEnchant.equalsIgnoreCase("respiration"))
+			parts[1] = "air";
+
+		if (itemEnchant.equalsIgnoreCase("sharpness"))
+			parts[1] = "dmg";
+
+		if (itemEnchant.equalsIgnoreCase("silktouch"))
+			parts[1] = "silk";
+
+		if (itemEnchant.equalsIgnoreCase("silk_touch"))
+			parts[1] = "silk";
+
+		if (itemEnchant.equalsIgnoreCase("unbreaking"))
+			parts[1] = "dura";
 
 		return parts;
 	}
@@ -570,12 +620,11 @@ public class MarketSearch extends JavaPlugin {
 		if (mat != null)
             return mat;
 
-
 		// ItemDB
 		return Lookup.findItemByName(name);
 	}
 
-	private String InitialCaps(String itemName) {
+	public static String InitialCaps(String itemName) {
 		String[] parts = itemName.split("_");
 		StringBuilder itemNameInitialCaps = new StringBuilder();
 

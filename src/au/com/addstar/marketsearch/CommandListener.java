@@ -4,20 +4,36 @@ import au.com.addstar.marketsearch.MarketSearch.ShopResult;
 import au.com.addstar.marketsearch.MarketSearch.ShopResultSort;
 import au.com.addstar.monolith.lookup.Lookup;
 import com.google.common.base.Strings;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.apache.commons.lang.StringUtils;
-import org.bukkit.ChatColor;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Chest;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Directional;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 import org.maxgamer.QuickShop.Shop.ShopType;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+
+import static au.com.addstar.marketsearch.MarketSearch.InitialCaps;
 
 class CommandListener implements CommandExecutor {
 	private final MarketSearch plugin;
@@ -49,7 +65,7 @@ class CommandListener implements CommandExecutor {
 					sender.sendMessage(ChatColor.GREEN +
 							" - filter weapon enchants using /ms find diamond_sword:fire");
 					sender.sendMessage(ChatColor.GREEN +
-							" - filter spawn eggs using /ms find monster_egg:cow");
+							" - find spawn eggs using /ms find cow_spawn_egg or chicken_spawn_egg");
 
 					return true;
 				}
@@ -108,7 +124,7 @@ class CommandListener implements CommandExecutor {
 					String filterText = plugin.getFilterText(search);
 					if (resultsUnfiltered.size() > 0 && !Strings.isNullOrEmpty(filterText)) {
 
-						// Filter the results to only keep those that contain filterText for an enchant, spawn egg type, or potion type
+						// Filter the results to only keep those that contain filterText for an enchant or potion
 						results = new ArrayList<>();
 						filterText = filterText.toLowerCase();
 
@@ -117,13 +133,6 @@ class CommandListener implements CommandExecutor {
 							if (result.Enchanted) {
 								String ench = plugin.getEnchantText(result.Enchants);
 								if (ench == null || ench.toLowerCase().contains(filterText)) {
-									results.add(result);
-								}
-								continue;
-							}
-
-							if (result.SpawnEgg) {
-								if (result.SpawnType == null || result.SpawnType.toString().toLowerCase().contains(filterText)) {
 									results.add(result);
 								}
 								continue;
@@ -141,26 +150,31 @@ class CommandListener implements CommandExecutor {
 						results = resultsUnfiltered;
 					}
 
+					int perPage = 10;
+					int pages = (int) Math.ceil((double) results.size() / perPage);
 
-					int perpage = 10;
-					int pages = (int) Math.ceil((double) results.size() / perpage);
+					String initialCapsName = InitialCaps(searchfor.name());
 
 					if (page > pages) {
-						sender.sendMessage(ChatColor.RED + "Sorry, no results found for " + searchfor.name());
+						if (page > 1)
+							sender.sendMessage(ChatColor.RED + "No more results found; " +
+									"use /ms find " + initialCapsName + " " + (page - 1));
+						else
+							sender.sendMessage(ChatColor.RED + "Sorry, no results found for " + initialCapsName);
 						return true;
 					}
 
 					Set<String> names = Lookup.findNameByItem(searchfor);
-					plugin.Debug(searchfor.name() + " aliases: " + String.join(", ", names));
+					plugin.Debug(initialCapsName + " aliases: " + String.join(", ", names));
 					sender.sendMessage(ChatColor.GREEN + "Page " + page + "/" + pages + ": " +
-							ChatColor.YELLOW + "(" + searchfor.name() + ") " +
+							ChatColor.YELLOW + "(" + initialCapsName + ") " +
 							ChatColor.WHITE + StringUtils.join(names, ", "));
 
 					if (results.size() > 0) {
 						String ownerstr;
 						String extraInfo = "";
-						int start = (perpage * (page - 1));
-						int end = start + perpage - 1;
+						int start = (perPage * (page - 1));
+						int end = start + perPage - 1;
 						for (int x = start; x <= end; x++) {
 							if (x > (results.size() - 1)) break;        // Don't go beyond the end of the results
 
@@ -175,13 +189,6 @@ class CommandListener implements CommandExecutor {
 								extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + enchantType + ChatColor.DARK_PURPLE + "]";
 								extraInfo = extraInfo.replace("/", ChatColor.DARK_PURPLE + "/" + ChatColor.LIGHT_PURPLE);
 							} else {
-								if (result.SpawnEgg) {
-									String spawnType = "??UnknownMob??";
-									if (result.SpawnType != null) {
-										spawnType = result.SpawnType.toString();
-									}
-									extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + spawnType + ChatColor.DARK_PURPLE + "]";
-								}
 
 								if (result.Potion) {
 									String potionType = "??UnknownPotion??";
@@ -199,17 +206,40 @@ class CommandListener implements CommandExecutor {
 								stockdisplay = ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + result.Stock + " left" + ChatColor.DARK_GREEN + ")";
 							}
 
-							sender.sendMessage(
-									ChatColor.GREEN + " - " + ownerstr +
-											ChatColor.GREEN + ": " +
-											ChatColor.YELLOW + "$" + result.Price + extraInfo +
-											ChatColor.GREEN + " " + stockdisplay);
+							ComponentBuilder row = new ComponentBuilder(" - ").color(ChatColor.GREEN);
+							row.event(new ClickEvent(
+									ClickEvent.Action.RUN_COMMAND,
+										"/ms tpto " +
+											result.ShopOwner + " " +
+											result.ShopLocation.getWorld().getName() + " " +
+											result.ShopLocation.getBlockX() + " " +
+											result.ShopLocation.getBlockY() + " " +
+											result.ShopLocation.getBlockZ()));
+							row.event(new HoverEvent(
+									HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(
+										"Click to teleport to " + result.ShopOwner + "'s shop")
+											.color(ChatColor.DARK_PURPLE)
+											.italic(true)
+											.create()));
+
+							if (sender instanceof Player) {
+								// Only send the basecomponent to players
+								row.append(ownerstr + " ").color(ChatColor.GREEN);
+								row.append("$" + result.Price + extraInfo).color(ChatColor.YELLOW);
+								row.append(" " + stockdisplay).color(ChatColor.GREEN);
+								sender.spigot().sendMessage(row.create());
+							} else {
+								// Output raw messages to console
+								sender.sendMessage(ChatColor.GREEN + ownerstr + " " +
+									ChatColor.YELLOW + "$" + result.Price + extraInfo +
+									ChatColor.GREEN + " " + stockdisplay);
+							}
 						}
 					} else {
 						if (action.equals("SELL")) {
-							sender.sendMessage(ChatColor.RED + "Sorry, there are no shops buying that.");
+							sender.sendMessage(ChatColor.RED + "Sorry, there are no shops buying " + initialCapsName);
 						} else {
-							sender.sendMessage(ChatColor.RED + "Sorry, no stock available in any shop.");
+							sender.sendMessage(ChatColor.RED + "Sorry, no stock available in any shop for " + initialCapsName);
 						}
 					}
 				} else {
@@ -329,6 +359,62 @@ class CommandListener implements CommandExecutor {
 				}
 				break;
 
+			case "TPTO":
+				if ((sender instanceof Player)) {
+					if (!plugin.RequirePermission((Player) sender, "marketsearch.tpto")) {
+						return false;
+					}
+				} else {
+					sender.sendMessage(ChatColor.RED + "This command cannot be run from console");
+					return true;
+				}
+
+				if (args.length >= 6) {
+					sender.sendMessage(ChatColor.LIGHT_PURPLE + "Teleporting you to " + args[1] + "'s shop...");
+
+					// Get location of market shop
+					World w = Bukkit.getWorld(args[2]);
+					double x = Double.valueOf(args[3]);
+					double y = Double.valueOf(args[4]);
+					double z = Double.valueOf(args[5]);
+					Location loc = new Location(w, x, y, z);
+					Block b = loc.getBlock();
+
+					// If it's still a chest, we teleport to the player to the location in front of the chest
+					if ((b.getType() == Material.CHEST) || (b.getType() == Material.TRAPPED_CHEST)) {
+						BlockFace bf = ((Directional) b.getBlockData()).getFacing();
+						Block sign = b.getRelative(bf);
+						Location signloc = sign.getLocation();
+						signloc.setDirection(bf.getOppositeFace().getDirection());
+						signloc.add(0.5, 0, 0.5);
+
+						Location tmp = signloc.clone();
+						if (tmp.add(0, 1, 0).getBlock().isEmpty()) {
+							Player player = Bukkit.getPlayer(sender.getName());
+							player.teleport(signloc);
+						} else {
+							sender.sendMessage(ChatColor.RED + "Sorry, unable to find a clear location to send you to.");
+							plugin.Warn("Error: Unable to find clear location in at: " +
+									signloc.getWorld().getName() + " " +
+									signloc.getBlockX() + " " +
+									signloc.getBlockY() + " " +
+									signloc.getBlockZ()
+							);
+							return true;
+						}
+					} else {
+						sender.sendMessage(ChatColor.RED + "Sorry, unable to find that shop.");
+						plugin.Warn("Error: Unable to find shop at: " +
+								loc.getWorld().getName() + " " +
+								loc.getBlockX() + " " +
+								loc.getBlockY() + " " +
+								loc.getBlockZ()
+						);
+						return true;
+					}
+				}
+				break;
+
 			case "REPORT":
 				if ((sender instanceof Player)) {
 					if (!plugin.RequirePermission((Player) sender, "marketsearch.report")) {
@@ -336,18 +422,30 @@ class CommandListener implements CommandExecutor {
 					}
 				}
 				break;
+
 			case "DEBUG":
 				if ((sender instanceof Player)) {
 					if (!plugin.RequirePermission((Player) sender, "marketsearch.debug")) {
 						return false;
 					}
 				}
-				if (plugin.isDebugEnabled()) {
-					plugin.setDebugEnabled(false);
-				} else {
-					plugin.setDebugEnabled(true);
+
+				int debugLevel = 1;
+
+				if (args.length > 1) {
+					if (StringUtils.isNumeric(args[1]))
+						debugLevel = Integer.parseInt(args[1]);
+					else
+						sender.sendMessage(ChatColor.RED + "Debug level should be an integer, not "+ args[1]);
 				}
-				sender.sendMessage(ChatColor.RED + "MS Debug is "+ plugin.isDebugEnabled());
+
+				if (args.length == 1 && plugin.isDebugEnabled()) {
+					plugin.setDebugEnabled(false);
+					sender.sendMessage(ChatColor.RED + "MS Debug is now off");
+				} else {
+					plugin.setDebugEnabled(true, debugLevel);
+					sender.sendMessage(ChatColor.RED + "MS Debug is now on, debug level " + debugLevel);
+				}
 				break;
 			default:
 			plugin.SendHelp(sender);
