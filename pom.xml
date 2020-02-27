@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>MarketSearch</groupId>
     <artifactId>MarketSearch</artifactId>
-    <version>1.4.1-SNAPSHOT</version>
+    <version>1.15.1-SNAPSHOT</version>
     <name>MarketSearch</name>
     <description>A set of helper commands to assist with QuickShop/Plot market worlds</description>
     <url>https://github.com/AddstarMC/MarketSearch</url>
@@ -12,7 +12,7 @@
         <plugin.version>${project.version}-${build.number}</plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spigot.api.version>1.13</spigot.api.version>
-        <spigot.version>1.13.2-R0.1-SNAPHSOT</spigot.version>
+        <spigot.version>1.15.2-R0.1-SNAPSHOT</spigot.version>
     </properties>
     <scm>
         <connection>scm:git:git@github.com:AddstarMC/MarketSearch.git</connection>
@@ -45,24 +45,32 @@
         </snapshotRepository>
     </distributionManagement>
     <repositories>
-
+        <repository>
+            <id>spigotmc-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
         <!-- For Vault -->
         <repository>
             <id>vault-repo</id>
-            <url>http://nexus.hc.to/content/repositories/pub_releases</url>
+            <url>https://nexus.hc.to/content/repositories/pub_releases</url>
         </repository>
-
         <!-- Addstar repos -->
         <repository>
             <id>addstar-repo</id>
-            <url>https://maven.addstar.com.au/artifactory/ext-release-local</url>
+            <url>https://maven.addstar.com.au/artifactory/all-release</url>
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
         </repository>
         <repository>
             <id>addstar-snapshot-repo</id>
-            <url>https://maven.addstar.com.au/artifactory/ext-snapshot-local</url>
+            <url>https://maven.addstar.com.au/artifactory/all-snapshot</url>
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
@@ -73,20 +81,8 @@
         <!-- Other repositories -->
         <repository>
             <id>maven-central</id>
-            <url>http://repo1.maven.org/maven2/</url>
+            <url>https://repo1.maven.org/maven2/</url>
         </repository>
-        <repository>
-            <id>spigot-repo</id>
-            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
-        </repository>
-        <!--        <repository>
-                    <id>uSkyBlock-mvn-repo</id>
-                    <url>https://raw.github.com/rlf/uSkyBlock/mvn-repo/</url>
-                    <snapshots>
-                        <enabled>true</enabled>
-                        <updatePolicy>always</updatePolicy>
-                    </snapshots>
-                </repository>-->
         <repository>
             <id>plotsquared-4</id>
             <url>http://ci.athion.net/job/PlotSquared-Breaking/ws/mvn/</url>
@@ -97,26 +93,31 @@
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.14-pre5-SNAPSHOT</version>
+            <version>${spigot.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>au.com.addstar</groupId>
             <artifactId>quickshop</artifactId>
-            <version>4.8.2-SNAPSHOT</version>
+            <version>4.9.0-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
             <groupId>au.com.addstar</groupId>
             <artifactId>Monolith</artifactId>
-            <version>1.5.0-SNAPSHOT</version>
+            <version>1.15.1-SNAPSHOT</version>
             <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>de.tr7zw</groupId>
+                    <artifactId>item-nbt-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.github.intellectualsites.plotsquared</groupId>
-            <artifactId>Plotsquared-Api</artifactId>
-            <version>4.176</version>
+            <artifactId>PlotSquared-API</artifactId>
+            <version>4.482</version>
             <optional>true</optional>
             <scope>provided</scope>
         </dependency>
