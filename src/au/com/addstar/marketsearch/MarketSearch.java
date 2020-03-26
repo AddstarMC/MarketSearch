@@ -1,17 +1,11 @@
 package au.com.addstar.marketsearch;
 
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
-import java.util.logging.Logger;
-
 import au.com.addstar.marketsearch.PlotProviders.PlotProvider;
 import au.com.addstar.marketsearch.PlotProviders.PlotSquaredPlotProvider;
-
 import au.com.addstar.marketsearch.PlotProviders.USkyBlockProvider;
+import au.com.addstar.monolith.lookup.Lookup;
+import au.com.addstar.monolith.util.PotionUtil;
 import org.apache.commons.lang.StringUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -30,10 +24,17 @@ import org.maxgamer.QuickShop.Shop.Shop;
 import org.maxgamer.QuickShop.Shop.ShopChunk;
 import org.maxgamer.QuickShop.Shop.ShopManager;
 import org.maxgamer.QuickShop.Shop.ShopType;
-
-import au.com.addstar.monolith.lookup.Lookup;
-import au.com.addstar.monolith.util.PotionUtil;
 import us.talabrek.ultimateskyblock.api.uSkyBlockAPI;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.logging.Logger;
 
 public class MarketSearch extends JavaPlugin {
 
@@ -182,16 +183,6 @@ public class MarketSearch extends JavaPlugin {
                 return -1;
             }
         };
-    }
-
-    public CompletableFuture<List<ShopResult>> getFutureShopResults(final ItemStack searchItem, final ShopType searchType) {
-        CompletableFuture<List<ShopResult>> future = new CompletableFuture<>();
-        return CompletableFuture.supplyAsync(new Supplier<List<ShopResult>>() {
-            @Override
-            public List<ShopResult> get() {
-                return searchMarket(searchItem, searchType);
-            }
-        });
     }
 
     public List<ShopResult> searchMarket(ItemStack searchItem, ShopType searchType) {
@@ -484,7 +475,7 @@ public class MarketSearch extends JavaPlugin {
     /*
      * Check required permission and send error response to player if not allowed
      */
-    public boolean RequirePermission(Player player, String perm) {
+    public boolean requirePermission(Player player, String perm) {
         if (!HasPermission(player, perm)) {
             if (player instanceof Player) {
                 player.sendMessage(ChatColor.RED + "Sorry, you do not have permission for this command.");
