@@ -1,7 +1,6 @@
 package au.com.addstar.marketsearch;
 
 import au.com.addstar.marketsearch.MarketSearch.ShopResult;
-import au.com.addstar.marketsearch.MarketSearch.ShopResultSort;
 import au.com.addstar.monolith.lookup.Lookup;
 import com.google.common.base.Strings;
 import net.md_5.bungee.api.ChatColor;
@@ -30,8 +29,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-import static au.com.addstar.marketsearch.MarketSearch.InitialCaps;
-
 class CommandListener implements CommandExecutor {
     private final MarketSearch plugin;
 
@@ -46,19 +43,12 @@ class CommandListener implements CommandExecutor {
             case "FIND":
             case "SELL":
             case "BUY":
-                if ((sender instanceof Player)) {
-                    if (!plugin.requirePermission((Player) sender, "marketsearch.find")) {
-                        return false;
-                    }
+                if ((sender instanceof Player) && !sender.hasPermission("marketsearch.find")) {
+                    return false;
                 }
 
                 if (args.length == 1) {
-                    sender.sendMessage(ChatColor.GREEN + "Please specify an item to search for, "
-                          + "or 'hand' to search for what you are currently holding (/ms find hand)");
-                    sender.sendMessage(ChatColor.GREEN + " - filter weapon enchants using /ms find diamond_sword:fire");
-                    sender.sendMessage(ChatColor.GREEN + " - find spawn eggs using /ms find cow_spawn_egg or "
-                          + "chicken_spawn_egg");
-
+                    plugin.sendHelp(sender);
                     return true;
                 }
 
@@ -81,57 +71,28 @@ class CommandListener implements CommandExecutor {
                 } else {
                     search = StringUtils.join(args, "_", 1, args.length);
                 }
-                // Validate the material and perform the search
-                // But first, check for 'hand' argument
-                final Material searchFor;
-                if (search.equalsIgnoreCase("hand")) {
-                    ItemStack hand = null;
-                    if (sender instanceof Player) {
-                        Player ply = (Player) sender;
-                        hand = ply.getInventory().getItemInMainHand();
-                    }
-                    if (hand != null && hand.getType() != Material.AIR) {
-                        searchFor = hand.getType();
-                    } else {
-                        sender.sendMessage(ChatColor.RED + "You need to be holding an item first!");
-                        return true;
-                    }
-                } else {
-                    try {
-                        searchFor = plugin.getItem(search);
-                    } catch (Exception e) {
-                        sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
-                        plugin.Debug("Exception caught: " + e.getCause());
-                        plugin.Debug(e.getMessage());
-                        return true;
-                    }
+                final ItemStack searchFor = getItem(sender, search);
+                if (searchFor == null) {
+                    plugin.debug("Warning: getItem() returned null");
+                    return true;
                 }
                 final String finalSearch = search;
                 final int finalPage = page;
-                if (searchFor != null) {
-                    Bukkit.getScheduler().runTaskAsynchronously(this.plugin, () -> {
-                        List<ShopResult> resultsUnfiltered;
-                        if (action.equals("SELL")) {
-                            resultsUnfiltered = plugin.searchMarket(new ItemStack(searchFor, 1), ShopType.BUYING);
-                        } else {
-                            resultsUnfiltered = plugin.searchMarket(new ItemStack(searchFor, 1), ShopType.SELLING);
-                        }
+                Bukkit.getScheduler().runTaskAsynchronously(this.plugin, () -> {
+                    List<ShopResult> resultsUnfiltered;
+                    if (action.equals("SELL")) {
+                        resultsUnfiltered = plugin.searchMarket(searchFor, ShopType.BUYING);
+                    } else {
+                        resultsUnfiltered = plugin.searchMarket(searchFor, ShopType.SELLING);
+                    }
 
-                        handleSearchResults(action, finalSearch, resultsUnfiltered, sender, searchFor, finalPage);
-                    });
-                    return true;
-                } else {
-                    sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
-                    plugin.Debug("Warning: getItem() returned null");
-                }
-                break;
-
+                    handleSearchResults(action, finalSearch, resultsUnfiltered, sender, searchFor, finalPage);
+                });
+                return true;
             case "STOCK":
             case "PSTOCK":
-                if ((sender instanceof Player)) {
-                    if (!plugin.requirePermission((Player) sender, "marketsearch.stock")) {
-                        return false;
-                    }
+                if ((sender instanceof Player) && sender.hasPermission("marketsearch.stock")) {
+                    return false;
                 }
                 Bukkit.getScheduler().runTaskAsynchronously(this.plugin, () -> {
                     List<ShopResult> results;
@@ -145,7 +106,7 @@ class CommandListener implements CommandExecutor {
                     } else {
                         // Get all shops (specific player)
                         if (args.length == 1) {
-                            plugin.SendHelp(sender);
+                            plugin.sendHelp(sender);
                             return;
                         } else if (args.length > 2) {
                             stockcmd = args[2].toUpperCase();
@@ -160,11 +121,11 @@ class CommandListener implements CommandExecutor {
                         int lessThan64 = 0;
                         int stackOrMore = 0;
                         for (ShopResult result : results) {
-                            if (result.Stock == 0) {
+                            if (result.stock == 0) {
                                 outOfStock++;
-                            } else if (result.Stock < 10) {
+                            } else if (result.stock < 10) {
                                 lessThan10++;
-                            } else if (result.Stock < 64) {
+                            } else if (result.stock < 64) {
                                 lessThan64++;
                             } else {
                                 stackOrMore++;
@@ -193,7 +154,7 @@ class CommandListener implements CommandExecutor {
                         }
                     } else {
                         if (!stockcmd.equals("EMPTY") && !stockcmd.equals("LOWEST")) {
-                            plugin.SendHelp(sender);
+                            plugin.sendHelp(sender);
                             return;
                         }
 
@@ -212,7 +173,7 @@ class CommandListener implements CommandExecutor {
                         }
 
                         // First sort results by price
-                        results.sort(ShopResultSort.ByStock);
+                        results.sort(MarketSearch.ShopResultSort.ByStock);
 
                         int count = 0;
                         for (ShopResult result : results) {
@@ -222,16 +183,16 @@ class CommandListener implements CommandExecutor {
                             if (count >= 15) {
                                 break;
                             }
-                            if (stockcmd.equals("EMPTY") && result.Stock > 0) {
+                            if (stockcmd.equals("EMPTY") && result.stock > 0) {
                                 break;
                             }
 
-                            if (stockcmd.equals("LOWEST") || result.Stock == 0) {
+                            if (stockcmd.equals("LOWEST") || result.stock == 0) {
                                 count++;
                                 sender.sendMessage(
-                                      ChatColor.GREEN + " - " + ChatColor.AQUA + result.ItemName
-                                            + ChatColor.GREEN + ": " + ChatColor.YELLOW + "$" + result.Price
-                                            + ChatColor.GREEN + "  (" + result.Stock + " left)");
+                                      ChatColor.GREEN + " - " + ChatColor.AQUA + result.itemName
+                                            + ChatColor.GREEN + ": " + ChatColor.YELLOW + "$" + result.price
+                                            + ChatColor.GREEN + "  (" + result.stock + " left)");
                             }
                         }
 
@@ -243,7 +204,7 @@ class CommandListener implements CommandExecutor {
                 break;
             case "TPTO":
                 if ((sender instanceof Player)) {
-                    if (!plugin.requirePermission((Player) sender, "marketsearch.tpto")) {
+                    if (!sender.hasPermission("marketsearch.tpto")) {
                         return false;
                     }
                     if (args.length >= 6) {
@@ -272,23 +233,12 @@ class CommandListener implements CommandExecutor {
                             } else {
                                 sender.sendMessage(ChatColor.RED
                                       + "Sorry, unable to find a clear location to send you to.");
-                                String worldName = (signloc.getWorld() == null)
-                                      ? " Unknown " : signloc.getWorld().getName();
-                                plugin.Warn("Error: Unable to find clear location in at: "
-                                      + worldName + " "
-                                      + signloc.getBlockX() + " "
-                                      + signloc.getBlockY() + " "
-                                      + signloc.getBlockZ()
-                                );
+                                shopNotFound(loc);
                                 return true;
                             }
                         } else {
                             sender.sendMessage(ChatColor.RED + "Sorry, unable to find that shop.");
-                            String worldName = (loc.getWorld() == null)
-                                  ? " Unknown " : loc.getWorld().getName();
-                            plugin.Warn("Error: Unable to find shop at: "
-                                  + worldName + " " + loc.getBlockX() + " " + loc.getBlockY() + " "
-                                  + loc.getBlockZ());
+                            shopNotFound(loc);
                             return true;
                         }
                     }
@@ -299,18 +249,14 @@ class CommandListener implements CommandExecutor {
                 break;
 
             case "REPORT":
-                if ((sender instanceof Player)) {
-                    if (!plugin.requirePermission((Player) sender, "marketsearch.report")) {
-                        return false;
-                    }
+                if ((sender instanceof Player) && !sender.hasPermission("marketsearch.report")) {
+                    return false;
                 }
                 break;
 
             case "DEBUG":
-                if ((sender instanceof Player)) {
-                    if (!plugin.requirePermission((Player) sender, "marketsearch.debug")) {
-                        return false;
-                    }
+                if ((sender instanceof Player) && !sender.hasPermission("marketsearch.debug")) {
+                    return false;
                 }
 
                 int debugLevel = 1;
@@ -332,16 +278,16 @@ class CommandListener implements CommandExecutor {
                 }
                 break;
             default:
-                plugin.SendHelp(sender);
+                plugin.sendHelp(sender);
                 break;
         }
         return true;
     }
 
     private void handleSearchResults(String action, String search, List<ShopResult> resultsUnfiltered,
-                                     CommandSender sender, Material searchFor, int page) {
+                                     CommandSender sender, ItemStack searchFor, int page) {
         List<ShopResult> results;
-        String filterText = plugin.getFilterText(search);
+        String filterText = getFilterText(search);
         if (resultsUnfiltered.size() > 0 && !Strings.isNullOrEmpty(filterText)) {
 
             // Filter the results to only keep those that contain filterText for an enchant or potion
@@ -350,16 +296,16 @@ class CommandListener implements CommandExecutor {
 
             for (ShopResult result : resultsUnfiltered) {
 
-                if (result.Enchanted) {
-                    String ench = plugin.getEnchantText(result.Enchants);
+                if (result.enchanted) {
+                    String ench = plugin.getEnchantText(result.enchants);
                     if (ench == null || ench.toLowerCase().contains(filterText)) {
                         results.add(result);
                     }
                     continue;
                 }
 
-                if (result.Potion) {
-                    if (result.PotionType == null || result.PotionType.toLowerCase().contains(filterText)) {
+                if (result.potion) {
+                    if (result.potionType == null || result.potionType.toLowerCase().contains(filterText)) {
                         results.add(result);
                     }
                 }
@@ -372,7 +318,7 @@ class CommandListener implements CommandExecutor {
         int perPage = 10;
         int pages = (int) Math.ceil((double) results.size() / perPage);
 
-        String initialCapsName = InitialCaps(searchFor.name());
+        String initialCapsName = MarketSearch.initialCaps(searchFor.getType().name());
 
         if (page > pages) {
             if (page > 1) {
@@ -384,8 +330,8 @@ class CommandListener implements CommandExecutor {
             return;
         }
 
-        Set<String> names = Lookup.findNameByItem(searchFor);
-        plugin.Debug(initialCapsName + " aliases: " + String.join(", ", names));
+        Set<String> names = Lookup.findNameByItem(searchFor.getType());
+        plugin.debug(initialCapsName + " aliases: " + String.join(", ", names));
         sender.sendMessage(ChatColor.GREEN + "Page " + page + "/" + pages + ": "
               + ChatColor.YELLOW + "(" + initialCapsName + ") " + ChatColor.WHITE
               + StringUtils.join(names, ", "));
@@ -400,22 +346,22 @@ class CommandListener implements CommandExecutor {
                     break;        // Don't go beyond the end of the results
                 }
                 ShopResult result = results.get(x);
-                ownerstr = ChatColor.AQUA + result.PlotOwner;
+                ownerstr = ChatColor.AQUA + result.plotOwner;
 
-                if (result.Enchanted) {
+                if (result.enchanted) {
                     String enchantType = "??UnknownType??";
-                    if (result.Enchants != null) {
-                        enchantType = plugin.getEnchantText(result.Enchants);
+                    if (result.enchants != null) {
+                        enchantType = plugin.getEnchantText(result.enchants);
                     }
                     extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + enchantType
                           + ChatColor.DARK_PURPLE + "]";
                     extraInfo = extraInfo.replace("/", ChatColor.DARK_PURPLE + "/" + ChatColor.LIGHT_PURPLE);
                 } else {
 
-                    if (result.Potion) {
+                    if (result.potion) {
                         String potionType = "??UnknownPotion??";
-                        if (result.PotionType != null) {
-                            potionType = result.PotionType;
+                        if (result.potionType != null) {
+                            potionType = result.potionType;
                         }
                         extraInfo = ChatColor.DARK_PURPLE + " [" + ChatColor.LIGHT_PURPLE + potionType
                               + ChatColor.DARK_PURPLE + "]";
@@ -424,22 +370,22 @@ class CommandListener implements CommandExecutor {
 
                 String stockdisplay;
                 if (action.equals("SELL")) {
-                    stockdisplay = ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + result.Space + " slots"
+                    stockdisplay = ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + result.space + " slots"
                           + ChatColor.DARK_GREEN + ")";
                 } else {
-                    stockdisplay = ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + result.Stock + " left"
+                    stockdisplay = ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + result.stock + " left"
                           + ChatColor.DARK_GREEN + ")";
                 }
 
                 ComponentBuilder row = new ComponentBuilder(" - ").color(ChatColor.GREEN);
                 String command = "";
                 BaseComponent[] hover = new ComponentBuilder("No location found...").create();
-                if (result.ShopLocation.getWorld() != null) {
+                if (result.shopLocation.getWorld() != null) {
                     command = "/ms tpto "
-                          + result.ShopOwner + " " + result.ShopLocation.getWorld().getName() + " "
-                          + result.ShopLocation.getBlockX() + " " + result.ShopLocation.getBlockY() + " "
-                          + result.ShopLocation.getBlockZ();
-                    hover = new ComponentBuilder("Click to teleport to " + result.ShopOwner + "'s shop")
+                          + result.shopOwner + " " + result.shopLocation.getWorld().getName() + " "
+                          + result.shopLocation.getBlockX() + " " + result.shopLocation.getBlockY() + " "
+                          + result.shopLocation.getBlockZ();
+                    hover = new ComponentBuilder("Click to teleport to " + result.shopOwner + "'s shop")
                           .color(ChatColor.DARK_PURPLE)
                           .italic(true)
                           .create();
@@ -449,12 +395,12 @@ class CommandListener implements CommandExecutor {
 
                 if (sender instanceof Player) {
                     row.append(ownerstr + " ").color(ChatColor.GREEN);
-                    row.append("$" + result.Price + extraInfo).color(ChatColor.YELLOW);
+                    row.append("$" + result.price + extraInfo).color(ChatColor.YELLOW);
                     row.append(" " + stockdisplay).color(ChatColor.GREEN);
                     sender.spigot().sendMessage(row.create());
                 } else {
                     // Output raw messages to console
-                    sender.sendMessage(ChatColor.GREEN + ownerstr + " " + ChatColor.YELLOW + "$" + result.Price
+                    sender.sendMessage(ChatColor.GREEN + ownerstr + " " + ChatColor.YELLOW + "$" + result.price
                           + extraInfo + ChatColor.GREEN + " " + stockdisplay);
                 }
             }
@@ -464,6 +410,139 @@ class CommandListener implements CommandExecutor {
             } else {
                 sender.sendMessage(ChatColor.RED + "Sorry, no stock available in any shop for " + initialCapsName);
             }
+        }
+    }
+
+    private ItemStack getItem(CommandSender sender, String search) {
+        ItemStack result;
+        if (search.equalsIgnoreCase("hand") || search.equalsIgnoreCase("handexact")) {
+            if (!(sender instanceof Player)) {
+                return null;
+            }
+            Player ply = (Player) sender;
+            ItemStack hand = ply.getInventory().getItemInMainHand();
+            if (hand.getType() != Material.AIR) {
+                if (search.equalsIgnoreCase("hand")) {
+                    result = new ItemStack(hand.getType(), 1);
+                } else {
+                    result = hand.clone();
+                }
+            } else {
+                sender.sendMessage(ChatColor.RED + "You need to be holding an item first!");
+                return null;
+            }
+        } else {
+            try {
+                Material searchFor = getItem(search);
+                if (searchFor == null) {
+                    sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
+                    return null;
+                }
+                result = new ItemStack(searchFor, 1);
+            } catch (Exception e) {
+                sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
+                plugin.debug("Exception caught: " + e.getCause());
+                plugin.debug(e.getMessage());
+                return null;
+            }
+        }
+        return result;
+    }
+
+    private Material getItem(String search) {
+        String[] parts = getSearchParts(search);
+        String itemName = parts[0];
+
+        Material def = getMaterial(itemName);
+        if (def == null) {
+            plugin.debug("Warning: getMaterial() returned null for: " + itemName);
+            return null;
+        }
+        plugin.debug("getMaterial returned: " + def.name());
+
+        // Check if we should override the data value with one supplied
+        if (parts.length > 1) {
+            try {
+                return def;
+            } catch (NumberFormatException e) {
+                plugin.debug("Warning: NumberFormatException caught in getItem()");
+            }
+        }
+        return def;
+    }
+
+    private String getFilterText(String search) {
+        String[] parts = getSearchParts(search);
+        if (parts.length > 1 && !StringUtils.isNumeric(parts[1])) {
+            // Filter Text is present
+            return parts[1];
+        }
+        return "";
+    }
+
+    private Material getMaterial(String name) {
+        // Bukkit name
+        Material mat = Material.getMaterial(name.toUpperCase());
+        if (mat != null) {
+            return mat;
+        }
+        // ItemDB
+        return Lookup.findItemByName(name);
+    }
+
+    private String[] getSearchParts(String search) {
+        // Split on the colon
+        String[] parts = search.split(":");
+        String itemName = parts[0];
+        String itemEnchant;
+
+        if (parts.length > 1 && !StringUtils.isNumeric(parts[1])) {
+            itemEnchant = parts[1];
+        } else {
+            itemEnchant = "";
+        }
+
+        // Auto-change carrots to carrots and potatoes to potato
+        if (itemName.equalsIgnoreCase("carrots")) {
+            parts[0] = "CARROT";
+        }
+        if (itemName.equalsIgnoreCase("potatoes")) {
+            parts[0] = "POTATO";
+        }
+        if (itemName.equalsIgnoreCase("diamond_pick")) {
+            parts[0] = "DIAMOND_PICKAXE";
+        }
+        if (itemEnchant.equalsIgnoreCase("efficiency")) {
+            parts[1] = "eff";
+        }
+        if (itemEnchant.equalsIgnoreCase("fortune")) {
+            parts[1] = "fort";
+        }
+        if (itemEnchant.equalsIgnoreCase("respiration")) {
+            parts[1] = "air";
+        }
+        if (itemEnchant.equalsIgnoreCase("sharpness")) {
+            parts[1] = "dmg";
+        }
+        if (itemEnchant.equalsIgnoreCase("silktouch")) {
+            parts[1] = "silk";
+        }
+        if (itemEnchant.equalsIgnoreCase("silk_touch")) {
+            parts[1] = "silk";
+        }
+        if (itemEnchant.equalsIgnoreCase("unbreaking")) {
+            parts[1] = "dura";
+        }
+        return parts;
+    }
+
+    private void shopNotFound(Location loc) {
+        if (loc.getWorld() == null) {
+            plugin.warn("Error: Unable to find shop at: world is null ");
+        } else {
+            plugin.warn("Error: Unable to find shop at: "
+                  + loc.getWorld().getName() + " " + loc.getBlockX() + " " + loc.getBlockY() + " "
+                  + loc.getBlockZ());
         }
     }
 }
