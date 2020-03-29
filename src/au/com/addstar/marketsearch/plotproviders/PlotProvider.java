@@ -1,9 +1,7 @@
-package au.com.addstar.marketsearch.PlotProviders;
+package au.com.addstar.marketsearch.plotproviders;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-
-import java.util.UUID;
 
 /**
  * au.com.addstar.marketsearch.PlotProviders
@@ -13,6 +11,6 @@ import java.util.UUID;
 public interface PlotProvider {
 
     String getPlotOwner(Location location);
-    
+
     void gotoPlot(Player target, Location location);
 }

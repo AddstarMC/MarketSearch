@@ -46,22 +46,6 @@
     </distributionManagement>
     <repositories>
         <repository>
-            <id>spigotmc-repo</id>
-            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-        <!-- For Vault -->
-        <repository>
-            <id>vault-repo</id>
-            <url>https://nexus.hc.to/content/repositories/pub_releases</url>
-        </repository>
-        <!-- Addstar repos -->
-        <repository>
             <id>addstar-repo</id>
             <url>https://maven.addstar.com.au/artifactory/all-release</url>
             <snapshots>
@@ -78,10 +62,13 @@
                 <enabled>false</enabled>
             </releases>
         </repository>
-        <!-- Other repositories -->
         <repository>
-            <id>maven-central</id>
-            <url>https://repo1.maven.org/maven2/</url>
+            <id>spigotmc-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>
+        <repository>
+            <id>vault-repo</id>
+            <url>https://nexus.hc.to/content/repositories/pub_releases</url>
         </repository>
         <repository>
             <id>plotsquared-4</id>

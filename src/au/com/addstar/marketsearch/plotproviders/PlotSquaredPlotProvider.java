@@ -1,10 +1,10 @@
-package au.com.addstar.marketsearch.PlotProviders;
+package au.com.addstar.marketsearch.plotproviders;
 
 
 import com.github.intellectualsites.plotsquared.api.PlotAPI;
+import com.github.intellectualsites.plotsquared.plot.object.Location;
 import com.github.intellectualsites.plotsquared.plot.object.Plot;
 import org.bukkit.Bukkit;
-import com.github.intellectualsites.plotsquared.plot.object.Location;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;
@@ -25,9 +25,9 @@ public class PlotSquaredPlotProvider implements PlotProvider {
     @Override
     public String getPlotOwner(org.bukkit.Location location) {
         Plot plot = getPlot(location);
-        if(plot.getOwners().size() == 1){
+        if (plot.getOwners().size() == 1) {
             UUID uuid = plot.getOwners().iterator().next();
-                return Bukkit.getOfflinePlayer(uuid).getName();
+            return Bukkit.getOfflinePlayer(uuid).getName();
         }
         return null;
     }
@@ -36,12 +36,12 @@ public class PlotSquaredPlotProvider implements PlotProvider {
         if (location == null || location.getWorld() == null)
             return null;
         Location location1 = new Location(
-                location.getWorld().getName(),
-                location.getBlockX(),
-                location.getBlockY(),
-                location.getBlockZ(),
-                location.getYaw(),
-                location.getPitch());
+              location.getWorld().getName(),
+              location.getBlockX(),
+              location.getBlockY(),
+              location.getBlockZ(),
+              location.getYaw(),
+              location.getPitch());
         return location1.getPlot();
     }
 
