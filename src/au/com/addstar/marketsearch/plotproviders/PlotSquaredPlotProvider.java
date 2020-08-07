@@ -1,9 +1,10 @@
 package au.com.addstar.marketsearch.plotproviders;
 
 
-import com.github.intellectualsites.plotsquared.api.PlotAPI;
-import com.github.intellectualsites.plotsquared.plot.object.Location;
-import com.github.intellectualsites.plotsquared.plot.object.Plot;
+import com.plotsquared.core.api.PlotAPI;
+import com.plotsquared.core.location.Location;
+import com.plotsquared.core.player.PlotPlayer;
+import com.plotsquared.core.plot.Plot;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -33,8 +34,9 @@ public class PlotSquaredPlotProvider implements PlotProvider {
     }
 
     private Plot getPlot(org.bukkit.Location location) {
-        if (location == null || location.getWorld() == null)
+        if (location == null || location.getWorld() == null) {
             return null;
+        }
         Location location1 = new Location(
               location.getWorld().getName(),
               location.getBlockX(),
@@ -47,8 +49,11 @@ public class PlotSquaredPlotProvider implements PlotProvider {
 
     public void gotoPlot(Player player, org.bukkit.Location loc) {
         Plot plot = getPlot(loc);
-        Location location = plot.getHome();
-        org.bukkit.Location tpLoc = new org.bukkit.Location(Bukkit.getWorld(location.getWorld()), location.getX(), location.getY(), location.getZ());
-        player.teleport(tpLoc);
+        final PlotPlayer<Player> playerPlotPlayer = PlotPlayer.from(player);
+        plot.getHome(location -> {
+            if (playerPlotPlayer.canTeleport(location)) {
+                playerPlotPlayer.teleport(location);
+            }
+        });
     }
 }

@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>MarketSearch</groupId>
     <artifactId>MarketSearch</artifactId>
-    <version>1.15.1-SNAPSHOT</version>
+    <version>1.16.1</version>
     <name>MarketSearch</name>
     <description>A set of helper commands to assist with QuickShop/Plot market worlds</description>
     <url>https://github.com/AddstarMC/MarketSearch</url>
@@ -12,7 +12,7 @@
         <plugin.version>${project.version}-${build.number}</plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spigot.api.version>1.13</spigot.api.version>
-        <spigot.version>1.15.2-R0.1-SNAPSHOT</spigot.version>
+        <spigot.version>1.16.1-R0.1-SNAPSHOT</spigot.version>
     </properties>
     <scm>
         <connection>scm:git:git@github.com:AddstarMC/MarketSearch.git</connection>
@@ -71,8 +71,12 @@
             <url>https://nexus.hc.to/content/repositories/pub_releases</url>
         </repository>
         <repository>
-            <id>plotsquared-4</id>
-            <url>http://ci.athion.net/job/PlotSquared-Breaking/ws/mvn/</url>
+            <id>enginehub</id>
+            <url>https://maven.enginehub.org/repo/</url>
+        </repository>
+        <repository>
+            <id>plotsquared</id>
+            <url>https://mvn.intellectualsites.com/content/groups/public/</url>
         </repository>
     </repositories>
 
@@ -102,9 +106,9 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.github.intellectualsites.plotsquared</groupId>
-            <artifactId>PlotSquared-API</artifactId>
-            <version>4.482</version>
+            <groupId>com.plotsquared</groupId>
+            <artifactId>PlotSquared-Core</artifactId>
+            <version>5.13.0</version>
             <optional>true</optional>
             <scope>provided</scope>
         </dependency>

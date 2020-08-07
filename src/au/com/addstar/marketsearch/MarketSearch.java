@@ -5,6 +5,7 @@ import au.com.addstar.marketsearch.plotproviders.PlotSquaredPlotProvider;
 import au.com.addstar.marketsearch.plotproviders.USkyBlockProvider;
 import au.com.addstar.monolith.util.PotionUtil;
 import org.apache.commons.lang.StringUtils;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -35,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.logging.Logger;
 
 public class MarketSearch extends JavaPlugin {
@@ -67,14 +70,14 @@ public class MarketSearch extends JavaPlugin {
         String shopOwner;
         String itemName;
         String type;
-        Integer stock;
-        Integer space;
-        Double price;
+        Integer stock = 0;
+        Integer space = 0;
+        Double price = 0D;
         Boolean enchanted = false;
         Map<Enchantment, Integer> enchants = null;
         Boolean potion = false;
         String potionType = null;
-        Location shopLocation;
+        Location shopLocation = null;
     }
 
     @Override
@@ -141,9 +144,8 @@ public class MarketSearch extends JavaPlugin {
 
                 for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
                     try {
-                        Shop shop = inChunk.getValue();
+                        final Shop shop = inChunk.getValue();
                         ItemStack shopItem = shop.getItem();
-
                         if (shopItem.getType() != itemType) {
                             // Wrong item
                             if (debugEnabled) {
@@ -160,8 +162,14 @@ public class MarketSearch extends JavaPlugin {
                             }
                             continue;
                         }
-                        if (searchType == ShopType.SELLING && shop.getRemainingStock() == 0) {
-                            // No stock
+                        ShopResult shopResult;
+                        try {
+                            shopResult = getFutureShopResult(shop);
+                        } catch (InterruptedException | ExecutionException e) {
+                            MarketSearch.logger.info(e.getMessage());
+                            continue;
+                        }
+                        if (searchType == ShopType.SELLING && shopResult.stock == 0) {
                             if (debugEnabled) {
                                 noStockCount++;
                                 if (noStockCount <= maxDetailedCount) {
@@ -177,7 +185,7 @@ public class MarketSearch extends JavaPlugin {
                             }
                             continue;
                         }
-                        if (searchType == ShopType.BUYING && shop.getRemainingSpace() == 0) {
+                        if (searchType == ShopType.BUYING && shopResult.space == 0) {
                             // No space
                             if (debugEnabled) {
                                 noSpaceCount++;
@@ -205,12 +213,10 @@ public class MarketSearch extends JavaPlugin {
                                   + "; storing");
                         }
 
-                        ShopResult result = storeResult(shop);
-
                         // Is this item enchanted?
                         if (shopItem.getEnchantments().size() > 0) {
-                            result.enchants = shopItem.getEnchantments();
-                            result.enchanted = true;
+                            shopResult.enchants = shopItem.getEnchantments();
+                            shopResult.enchanted = true;
                         }
 
                         // Is this an enchanted book?
@@ -220,8 +226,8 @@ public class MarketSearch extends JavaPlugin {
 
                             if (bookMeta != null && bookMeta.hasStoredEnchants()) {
                                 // Store the enchantment(s)
-                                result.enchanted = true;
-                                result.enchants = bookMeta.getStoredEnchants();
+                                shopResult.enchanted = true;
+                                shopResult.enchants = bookMeta.getStoredEnchants();
                             } else {
                                 if (debugEnabled) {
                                     logger.info("No stored enchants on book");
@@ -232,17 +238,14 @@ public class MarketSearch extends JavaPlugin {
                         // Is this a potion?
                         if (shopItem.getType() == Material.POTION
                               || shopItem.getType() == Material.SPLASH_POTION
-                              || shopItem.getType() == Material.LINGERING_POTION) {
+                              || shopItem.getType() == Material.LINGERING_POTION
+                              || shopItem.getType() == Material.TIPPED_ARROW) {
 
                             PotionUtil potion = PotionUtil.fromItemStack(shopItem);
-                            result.potion = true;
-                            result.potionType = potion.toString();
+                            shopResult.potion = true;
+                            shopResult.potionType = potion.toString();
                         }
-
-                        addshopResult(results, shop, result);
-
-                        // Store the shop location so we can teleport the player later
-                        result.shopLocation = shop.getLocation();
+                        addshopResult(results, shopResult);
                     } catch (InvalidShopException exception) {
                         MarketSearch.logger.info(exception.getMessage());
                     }
@@ -283,9 +286,9 @@ public class MarketSearch extends JavaPlugin {
                             if (shop.getOwner().getName() != null) {
                                 if (shop.getOwner().getName().equalsIgnoreCase(player)) {
                                     try {
-                                        ShopResult result = storeResult(shop);
-                                        addshopResult(results, shop, result);
-                                    } catch (InvalidShopException e) {
+                                        ShopResult result = getFutureShopResult(shop);
+                                        addshopResult(results, result);
+                                    } catch (InterruptedException | ExecutionException e) {
                                         MarketSearch.logger.info(e.getMessage());
                                     }
                                 }
@@ -302,13 +305,13 @@ public class MarketSearch extends JavaPlugin {
         return results;
     }
 
-    private void addshopResult(List<ShopResult> results, Shop shop, ShopResult result) {
-        String owner = plotProvider.getPlotOwner(shop.getLocation());
+    private void addshopResult(List<ShopResult> results, ShopResult result) {
+        String owner = plotProvider.getPlotOwner(result.shopLocation);
         if (owner != null) {
             result.plotOwner = owner;
             results.add(result);
         } else {
-            warn("Unable to find plot! " + shop.getLocation().toString());
+            warn("Unable to find plot! " + result.shopLocation.toString());
         }
     }
 
@@ -465,6 +468,18 @@ public class MarketSearch extends JavaPlugin {
         return itemNameInitialCaps.toString();
     }
 
+    private ShopResult getFutureShopResult(Shop shop) throws ExecutionException, InterruptedException {
+        FutureTask<ShopResult> task = new FutureTask<>(() -> {
+            try {
+                return storeResult(shop);
+            } catch (InvalidShopException e) {
+                throw new ExecutionException(e);
+            }
+        });
+        Bukkit.getScheduler().runTask(this, task);
+        return task.get();
+    }
+
     private ShopResult storeResult(Shop shop) throws InvalidShopException {
         ShopResult result = new ShopResult();
         ItemStack foundItem = shop.getItem();
@@ -474,7 +489,7 @@ public class MarketSearch extends JavaPlugin {
         result.stock = shop.getRemainingStock();
         result.space = shop.getRemainingSpace();
         result.price = shop.getPrice();
-
+        result.shopLocation = shop.getLocation();
         return result;
     }
 

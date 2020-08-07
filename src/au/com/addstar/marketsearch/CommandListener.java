@@ -309,7 +309,6 @@ class CommandListener implements CommandExecutor {
                         results.add(result);
                     }
                 }
-
             }
         } else {
             // Do not filter
@@ -511,6 +510,11 @@ class CommandListener implements CommandExecutor {
         }
         if (itemName.equalsIgnoreCase("diamond_pick")) {
             parts[0] = "DIAMOND_PICKAXE";
+        }
+        if (itemName.toLowerCase().contains("arrow")) {
+            if (parts[1].length() > 1) {
+                parts[0] = Material.TIPPED_ARROW.name().toLowerCase();
+            }
         }
         if (itemEnchant.equalsIgnoreCase("efficiency")) {
             parts[1] = "eff";
