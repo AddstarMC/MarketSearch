@@ -2,6 +2,7 @@ package au.com.addstar.marketsearch;
 
 import au.com.addstar.marketsearch.MarketSearch.ShopResult;
 import au.com.addstar.monolith.lookup.Lookup;
+import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -22,12 +23,15 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.maxgamer.QuickShop.Shop.ShopType;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 class CommandListener implements CommandExecutor {
     private final MarketSearch plugin;
@@ -330,11 +334,12 @@ class CommandListener implements CommandExecutor {
         }
 
         Set<String> names = Lookup.findNameByItem(searchFor.getType());
-        plugin.debug(initialCapsName + " aliases: " + String.join(", ", names));
+        StringBuilder builder = new StringBuilder();
+        names.forEach(s -> builder.append(StringUtils.trim(s)).append(", "));
+        plugin.debug(initialCapsName + " aliases: " + builder.toString());
         sender.sendMessage(ChatColor.GREEN + "Page " + page + "/" + pages + ": "
               + ChatColor.YELLOW + "(" + initialCapsName + ") " + ChatColor.WHITE
-              + StringUtils.join(names, ", "));
-
+              + builder.toString());
         if (results.size() > 0) {
             String ownerstr;
             String extraInfo = "";

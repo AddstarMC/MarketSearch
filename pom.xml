@@ -120,7 +120,6 @@
             <scope>provided</scope>
         </dependency>
     </dependencies>
-
     <build>
         <sourceDirectory>src</sourceDirectory>
         <resources>
@@ -129,7 +128,7 @@
                 <filtering>true</filtering>
                 <directory>${basedir}/src/resources</directory>
                 <includes>
-                    <include>plugin.yml</include>
+                    <include>*.yml</include>
                 </includes>
             </resource>
         </resources>

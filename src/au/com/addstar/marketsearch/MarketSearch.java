@@ -11,6 +11,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -28,6 +30,8 @@ import org.maxgamer.QuickShop.Shop.ShopType;
 import org.maxgamer.QuickShop.exceptions.InvalidShopException;
 import us.talabrek.ultimateskyblock.api.uSkyBlockAPI;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -45,6 +49,7 @@ public class MarketSearch extends JavaPlugin {
     private static final Logger logger = Logger.getLogger("Minecraft");
     private final Map<Enchantment, String> enchantMap = new HashMap<>();
     private boolean debugEnabled = false;
+    private FileConfiguration config;
     // Higher numbers lead to more debug messages
     private int debugLevel = 1;
     private String marketWorld = null;
@@ -84,6 +89,7 @@ public class MarketSearch extends JavaPlugin {
     public void onEnable() {
         // Register necessary events
         pdfFile = this.getDescription();
+        configure();
         PluginManager pm = this.getServer().getPluginManager();
         quickShopManager = QuickShop.instance.getShopManager();
 
@@ -102,10 +108,8 @@ public class MarketSearch extends JavaPlugin {
                 log("PlotProvider: PlotSquared hooked");
             }
         }
-
+        marketWorld = (config != null) ? config.getString("world", "market") : "market";
         loadEnchants();
-
-        marketWorld = "market";
         String commandText = "marketsearch";
         PluginCommand command = getCommand(commandText);
         if (command != null) {
@@ -116,6 +120,28 @@ public class MarketSearch extends JavaPlugin {
         }
 
         log(pdfFile.getName() + " " + pdfFile.getVersion() + " has been enabled");
+    }
+
+    private void configure() {
+        File file = new File(getDataFolder(), "config.yml");
+        try {
+            if (file.exists()) {
+                config = YamlConfiguration.loadConfiguration(file);
+                updateConfig(file);
+            } else {
+                getDataFolder().mkdirs();
+                config = getConfig();
+                updateConfig(file);
+            }
+        } catch (IOException e) {
+            logger.fine("Errors creating config file");
+        }
+    }
+
+    private void updateConfig(File file) throws IOException {
+        config.addDefault("world", "market");
+        config.options().copyDefaults(true);
+        config.save(file);
     }
 
     @Override
@@ -206,13 +232,11 @@ public class MarketSearch extends JavaPlugin {
                             // Wrong shop type
                             continue;
                         }
-
                         if (debugEnabled) {
                             logger.info("Match found, in shop at " + shop.getLocation().getBlockX() + " "
                                   + shop.getLocation().getBlockY() + " " + shop.getLocation().getBlockZ()
                                   + "; storing");
                         }
-
                         // Is this item enchanted?
                         if (shopItem.getEnchantments().size() > 0) {
                             shopResult.enchants = shopItem.getEnchantments();
@@ -254,7 +278,6 @@ public class MarketSearch extends JavaPlugin {
         } else {
             warn("Quickshop returned NO Shops");
         }
-
         if (debugEnabled) {
             if (results.size() == 0) {
                 logger.info("No results for item " + itemType.name());
@@ -262,7 +285,6 @@ public class MarketSearch extends JavaPlugin {
                 logger.info("Sorting " + results.size() + " results for item " + itemType.name());
             }
         }
-
         // Order results here
         if (searchType == ShopType.SELLING) {
             results.sort(ShopResultSort.ByPrice);
@@ -306,13 +328,18 @@ public class MarketSearch extends JavaPlugin {
     }
 
     private void addshopResult(List<ShopResult> results, ShopResult result) {
-        String owner = plotProvider.getPlotOwner(result.shopLocation);
+        String owner = null;
+        if (plotProvider == null) {
+            result.plotOwner = result.shopOwner;
+        } else {
+            owner = plotProvider.getPlotOwner(result.shopLocation);
+        }
         if (owner != null) {
             result.plotOwner = owner;
-            results.add(result);
         } else {
             warn("Unable to find plot! " + result.shopLocation.toString());
         }
+        results.add(result);
     }
 
     public String getEnchantText(Map<Enchantment, Integer> enchants) {
