@@ -27,6 +27,7 @@ import org.maxgamer.QuickShop.Shop.Shop;
 import org.maxgamer.QuickShop.Shop.ShopChunk;
 import org.maxgamer.QuickShop.Shop.ShopManager;
 import org.maxgamer.QuickShop.Shop.ShopType;
+import org.maxgamer.QuickShop.Util.Util;
 import org.maxgamer.QuickShop.exceptions.InvalidShopException;
 import us.talabrek.ultimateskyblock.api.uSkyBlockAPI;
 
@@ -343,19 +344,34 @@ public class MarketSearch extends JavaPlugin {
     }
 
     public String getEnchantText(Map<Enchantment, Integer> enchants) {
-        List<String> elist = new ArrayList<>();
+        return getEnchantText(enchants, true);
+    }
+
+    /**
+     * Return a string of enchants.
+     *
+     * @param enchants   Map
+     * @param abbreviate use abbreviation.
+     * @return String
+     */
+    public String getEnchantText(Map<Enchantment, Integer> enchants, boolean abbreviate) {
+        List<String> enchantList = new ArrayList<>();
         for (Entry<Enchantment, Integer> e : enchants.entrySet()) {
             Enchantment enchant = e.getKey();
             Integer level = e.getValue();
-            String abbr = enchantMap.get(enchant);
-            if (abbr == null) {
-                abbr = "??";
+            String abbr;
+            if (abbreviate) {
+                abbr = enchantMap.get(enchant);
+                if (abbr == null) {
+                    abbr = "??";
+                }
+            } else {
+                abbr = e.getKey().getKey().getKey();
             }
-            elist.add(abbr + level);
+            String roman = Util.toRoman(level);
+            enchantList.add(abbr + " " + roman);
         }
-
-        // Return sorted string list
-        return StringUtils.join(elist.toArray(), "/");
+        return StringUtils.join(enchantList.toArray(), "/");
     }
 
     private void loadEnchants() {
@@ -404,11 +420,7 @@ public class MarketSearch extends JavaPlugin {
             ItemMeta shopItemMeta = item.getItemMeta();
             if (shopItemMeta != null) {
                 Map<Enchantment, Integer> enchants = shopItemMeta.getEnchants();
-
-                for (final Entry<Enchantment, Integer> entries : enchants.entrySet()) {
-                    description.append(", enchantment: ").append(entries.getKey().getKey()).append(" ")
-                          .append(entries.getValue());
-                }
+                description.append(getEnchantText(enchants, false));
             }
         }
 
