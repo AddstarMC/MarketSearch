@@ -447,6 +447,7 @@ class CommandListener implements CommandExecutor {
                 sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
                 plugin.debug("Exception caught: " + e.getCause());
                 plugin.debug(e.getMessage());
+                plugin.debug(e.getStackTrace().toString());
                 return null;
             }
         }
@@ -517,7 +518,7 @@ class CommandListener implements CommandExecutor {
             parts[0] = "DIAMOND_PICKAXE";
         }
         if (itemName.toLowerCase().contains("arrow")) {
-            if (parts[1].length() > 1) {
+            if (parts.length > 1) {
                 parts[0] = Material.TIPPED_ARROW.name().toLowerCase();
             }
         }

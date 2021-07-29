@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>MarketSearch</groupId>
     <artifactId>MarketSearch</artifactId>
-    <version>1.16.1</version>
+    <version>1.16.5</version>
     <name>MarketSearch</name>
     <description>A set of helper commands to assist with QuickShop/Plot market worlds</description>
     <url>https://github.com/AddstarMC/MarketSearch</url>
@@ -11,8 +11,8 @@
         <build.number/>
         <plugin.version>${project.version}-${build.number}</plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spigot.api.version>1.13</spigot.api.version>
-        <spigot.version>1.16.1-R0.1-SNAPSHOT</spigot.version>
+        <spigot.api.version>1.16</spigot.api.version>
+        <spigot.version>1.16.5-R0.1-SNAPSHOT</spigot.version>
     </properties>
     <scm>
         <connection>scm:git:git@github.com:AddstarMC/MarketSearch.git</connection>
@@ -96,7 +96,7 @@
         <dependency>
             <groupId>au.com.addstar</groupId>
             <artifactId>Monolith</artifactId>
-            <version>1.16.1-SNAPSHOT</version>
+            <version>1.16.3-SNAPSHOT</version>
             <scope>provided</scope>
             <exclusions>
                 <exclusion>
