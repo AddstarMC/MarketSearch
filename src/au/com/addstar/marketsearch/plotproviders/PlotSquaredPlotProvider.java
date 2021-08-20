@@ -1,7 +1,6 @@
 package au.com.addstar.marketsearch.plotproviders;
 
 
-import com.plotsquared.core.api.PlotAPI;
 import com.plotsquared.core.location.Location;
 import com.plotsquared.core.player.PlotPlayer;
 import com.plotsquared.core.plot.Plot;
@@ -17,12 +16,6 @@ import java.util.UUID;
  */
 public class PlotSquaredPlotProvider implements PlotProvider {
 
-    private final PlotAPI api;
-
-    public PlotSquaredPlotProvider() {
-        api = new PlotAPI();
-    }
-
     @Override
     public String getPlotOwner(org.bukkit.Location location) {
         Plot plot = getPlot(location);
@@ -37,13 +30,13 @@ public class PlotSquaredPlotProvider implements PlotProvider {
         if (location == null || location.getWorld() == null) {
             return null;
         }
-        Location location1 = new Location(
-              location.getWorld().getName(),
-              location.getBlockX(),
-              location.getBlockY(),
-              location.getBlockZ(),
-              location.getYaw(),
-              location.getPitch());
+        Location location1 = Location.at(
+                location.getWorld().getName(),
+                location.getBlockX(),
+                location.getBlockY(),
+                location.getBlockZ(),
+                location.getYaw(),
+                location.getPitch());
         return location1.getPlot();
     }
 
