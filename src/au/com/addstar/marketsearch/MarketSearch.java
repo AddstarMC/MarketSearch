@@ -5,10 +5,7 @@ import au.com.addstar.marketsearch.plotproviders.PlotSquaredPlotProvider;
 import au.com.addstar.marketsearch.plotproviders.USkyBlockProvider;
 import au.com.addstar.monolith.util.PotionUtil;
 import org.apache.commons.lang.StringUtils;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -22,13 +19,13 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.maxgamer.QuickShop.QuickShop;
-import org.maxgamer.QuickShop.Shop.Shop;
-import org.maxgamer.QuickShop.Shop.ShopChunk;
-import org.maxgamer.QuickShop.Shop.ShopManager;
-import org.maxgamer.QuickShop.Shop.ShopType;
-import org.maxgamer.QuickShop.Util.Util;
-import org.maxgamer.QuickShop.exceptions.InvalidShopException;
+import org.maxgamer.quickshop.api.QuickShopAPI;
+import org.maxgamer.quickshop.api.shop.Shop;
+import org.maxgamer.quickshop.api.shop.ShopChunk;
+import org.maxgamer.quickshop.api.shop.ShopManager;
+import org.maxgamer.quickshop.api.shop.ShopType;
+import org.maxgamer.quickshop.util.RomanNumber;
+import org.maxgamer.quickshop.util.Util;
 import us.talabrek.ultimateskyblock.api.uSkyBlockAPI;
 
 import java.io.File;
@@ -92,7 +89,14 @@ public class MarketSearch extends JavaPlugin {
         pdfFile = this.getDescription();
         configure();
         PluginManager pm = this.getServer().getPluginManager();
-        quickShopManager = QuickShop.instance.getShopManager();
+
+        if (pm.getPlugin("QuickShop") != null) {
+            QuickShopAPI qsapi = (QuickShopAPI)pm.getPlugin("QuickShop");
+            if (qsapi != null) {
+                quickShopManager = qsapi.getShopManager();
+                log("PlotProvider: QuickShop hooked");
+            }
+        }
 
         if (pm.getPlugin("uSkyBlock") != null) {
             Plugin uskyBlock = pm.getPlugin("uSkyBlock");
@@ -152,23 +156,21 @@ public class MarketSearch extends JavaPlugin {
 
     public List<ShopResult> searchMarket(ItemStack searchItem, ShopType searchType) {
         List<ShopResult> results = new ArrayList<>();
-        HashMap<ShopChunk, HashMap<Location, Shop>> map = quickShopManager.getShops(marketWorld);
+        Map<ShopChunk, Map<Location, Shop>> map = quickShopManager.getShops(marketWorld);
 
         int maxDetailedCount = 50;
         int wrongItemCount = 0;
         int noStockCount = 0;
         int noSpaceCount = 0;
+        long totalTime = 0;
+        long shopResultTime = 0;
 
         Material itemType = searchItem.getType();
 
+        long startmain = System.nanoTime();
         if (map != null) {
-
-            if (debugEnabled) {
-                debug("Searching shops for item " + getItemDetails(searchItem));
-            }
-
-            for (Entry<ShopChunk, HashMap<Location, Shop>> chunks : map.entrySet()) {
-
+            debug("Searching " + map.size() + " shops for item " + getItemDetails(searchItem));
+            for (Entry<ShopChunk, Map<Location, Shop>> chunks : map.entrySet()) {
                 for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
                     try {
                         final Shop shop = inChunk.getValue();
@@ -189,13 +191,17 @@ public class MarketSearch extends JavaPlugin {
                             }
                             continue;
                         }
+                        long startshop = System.nanoTime();
                         ShopResult shopResult;
                         try {
                             shopResult = getFutureShopResult(shop);
                         } catch (InterruptedException | ExecutionException e) {
                             MarketSearch.logger.info(e.getMessage());
                             continue;
+                        } finally {
+                            shopResultTime += System.nanoTime() - startshop;
                         }
+
                         if (searchType == ShopType.SELLING && shopResult.stock == 0) {
                             if (debugEnabled) {
                                 noStockCount++;
@@ -271,7 +277,7 @@ public class MarketSearch extends JavaPlugin {
                             shopResult.potionType = potion.toString();
                         }
                         addshopResult(results, shopResult);
-                    } catch (InvalidShopException exception) {
+                    } catch (Exception exception) {
                         MarketSearch.logger.info(exception.getMessage());
                     }
                 }
@@ -279,12 +285,16 @@ public class MarketSearch extends JavaPlugin {
         } else {
             warn("Quickshop returned NO Shops");
         }
+        totalTime += System.nanoTime() - startmain;
+
         if (debugEnabled) {
             if (results.size() == 0) {
                 logger.info("No results for item " + itemType.name());
             } else {
                 logger.info("Sorting " + results.size() + " results for item " + itemType.name());
             }
+            debug("Total time searching: " + totalTime);
+            debug("Time fetching shop results: " + shopResultTime);
         }
         // Order results here
         if (searchType == ShopType.SELLING) {
@@ -295,32 +305,24 @@ public class MarketSearch extends JavaPlugin {
         return results;
     }
 
-    public List<ShopResult> getPlayerShops(String player) {
-
+    public List<ShopResult> getPlayerShops(String playername) {
+        OfflinePlayer player = Bukkit.getOfflinePlayer(playername);
         List<ShopResult> results = new ArrayList<>();
-        HashMap<ShopChunk, HashMap<Location, Shop>> map = quickShopManager.getShops(marketWorld);
-        if (map != null) {
-            HashMap<ShopChunk, HashMap<Location, Shop>> shops = quickShopManager.getShops(marketWorld);
-            if (shops != null) {
-                for (Entry<ShopChunk, HashMap<Location, Shop>> chunks : shops.entrySet()) {
-                    if (chunks.getValue() != null) {
-                        for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
-                            Shop shop = inChunk.getValue();
-                            if (shop.getOwner().getName() != null) {
-                                if (shop.getOwner().getName().equalsIgnoreCase(player)) {
-                                    try {
-                                        ShopResult result = getFutureShopResult(shop);
-                                        addshopResult(results, result);
-                                    } catch (InterruptedException | ExecutionException e) {
-                                        MarketSearch.logger.info(e.getMessage());
-                                    }
-                                }
-                            }
-                        }
-                    }
+        if (player == null || !player.hasPlayedBefore()) {
+            warn("Player " + playername + " does not exist");
+            return results;
+        }
+        debug("Getting shops for " + player);
+        List<Shop> shops = quickShopManager.getPlayerAllShops(player.getUniqueId());
+        if (shops != null) {
+            debug("Searching " + shops.size() + "x player shops...");
+            for (Shop shop : shops) {
+                try {
+                    ShopResult result = getFutureShopResult(shop);
+                    addshopResult(results, result);
+                } catch (InterruptedException | ExecutionException e) {
+                    MarketSearch.logger.info(e.getMessage());
                 }
-            } else {
-                warn("MarketWorld returned NO Shops");
             }
         } else {
             warn("Quickshop returned NO Shops");
@@ -368,7 +370,7 @@ public class MarketSearch extends JavaPlugin {
             } else {
                 abbr = e.getKey().getKey().getKey();
             }
-            String roman = Util.toRoman(level);
+            String roman = RomanNumber.toRoman(level);
             enchantList.add(abbr + " " + roman);
         }
         return StringUtils.join(enchantList.toArray(), "/");
@@ -514,7 +516,7 @@ public class MarketSearch extends JavaPlugin {
         FutureTask<ShopResult> task = new FutureTask<>(() -> {
             try {
                 return storeResult(shop);
-            } catch (InvalidShopException e) {
+            } catch (Exception e) {
                 throw new ExecutionException(e);
             }
         });
@@ -522,10 +524,10 @@ public class MarketSearch extends JavaPlugin {
         return task.get();
     }
 
-    private ShopResult storeResult(Shop shop) throws InvalidShopException {
+    private ShopResult storeResult(Shop shop) {
         ShopResult result = new ShopResult();
         ItemStack foundItem = shop.getItem();
-        result.shopOwner = shop.getOwner().getName();
+        result.shopOwner = shop.ownerName();    // name
         result.type = foundItem.getType().name();
         result.itemName = initialCaps(foundItem.getType().name());
         result.stock = shop.getRemainingStock();
