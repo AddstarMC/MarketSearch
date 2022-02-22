@@ -1,6 +1,7 @@
 package au.com.addstar.marketsearch;
 
 import au.com.addstar.marketsearch.MarketSearch.ShopResult;
+import au.com.addstar.marketsearch.SlimefunNameDB.sfDBItem;
 import au.com.addstar.monolith.lookup.Lookup;
 import com.google.common.base.Strings;
 import net.md_5.bungee.api.ChatColor;
@@ -9,10 +10,7 @@ import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import org.apache.commons.lang.StringUtils;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Directional;
@@ -71,6 +69,7 @@ class CommandListener implements CommandExecutor {
                 } else {
                     search = StringUtils.join(args, "_", 1, args.length);
                 }
+
                 final ItemStack searchFor = getItem(sender, search);
                 if (searchFor == null) {
                     plugin.debug("Warning: getItem() returned null");
@@ -91,10 +90,11 @@ class CommandListener implements CommandExecutor {
                 return true;
             case "STOCK":
             case "PSTOCK":
-                if ((sender instanceof Player) && sender.hasPermission("marketsearch.stock")) {
+                if ((sender instanceof Player) && !sender.hasPermission("marketsearch.stock")) {
                     return false;
                 }
                 Bukkit.getScheduler().runTaskAsynchronously(this.plugin, () -> {
+                    plugin.debug("Started async task to collect stock levels");
                     List<ShopResult> results;
                     String stockcmd = "";
                     if (action.equals("STOCK")) {
@@ -289,13 +289,11 @@ class CommandListener implements CommandExecutor {
         List<ShopResult> results;
         String filterText = getFilterText(search);
         if (resultsUnfiltered.size() > 0 && !Strings.isNullOrEmpty(filterText)) {
-
             // Filter the results to only keep those that contain filterText for an enchant or potion
             results = new ArrayList<>();
             filterText = filterText.toLowerCase();
 
             for (ShopResult result : resultsUnfiltered) {
-
                 if (result.enchanted) {
                     String ench = plugin.getEnchantText(result.enchants);
                     if (ench == null || ench.toLowerCase().contains(filterText)) {
@@ -317,7 +315,14 @@ class CommandListener implements CommandExecutor {
         int perPage = 10;
         int pages = (int) Math.ceil((double) results.size() / perPage);
 
-        String initialCapsName = MarketSearch.initialCaps(searchFor.getType().name());
+        sfDBItem sfitem = plugin.getSlimefunItemType(searchFor);
+        String initialCapsName;
+        if (sfitem != null) {
+            initialCapsName = ChatColor.GOLD + "Slimefun: "
+                + ChatColor.YELLOW + MarketSearch.initialCaps(sfitem.sfname);
+        } else {
+            initialCapsName = ChatColor.AQUA + MarketSearch.initialCaps(searchFor.getType().name());
+        }
 
         if (page > pages) {
             if (page > 1) {
@@ -329,13 +334,21 @@ class CommandListener implements CommandExecutor {
             return;
         }
 
-        Set<String> names = Lookup.findNameByItem(searchFor.getType());
-        StringBuilder builder = new StringBuilder();
-        names.forEach(s -> builder.append(StringUtils.trim(s)).append(", "));
-        plugin.debug(initialCapsName + " aliases: " + builder.toString());
+        StringBuilder extrainfo = new StringBuilder();
+        if (sfitem != null) {
+            extrainfo.append(sfitem.fullname);
+            plugin.debug(initialCapsName + " (" + extrainfo + ")");
+        } else {
+            Set<String> names = Lookup.findNameByItem(searchFor.getType());
+            names.forEach(s -> extrainfo.append(StringUtils.trim(s)).append(", "));
+            plugin.debug(initialCapsName + " aliases: " + extrainfo);
+        }
+
+        // Show header on results
         sender.sendMessage(ChatColor.GREEN + "Page " + page + "/" + pages + ": "
-              + ChatColor.YELLOW + "(" + initialCapsName + ") " + ChatColor.WHITE
-              + builder.toString());
+            + ChatColor.YELLOW + initialCapsName + ChatColor.GOLD + " - "
+            + ChatColor.WHITE + extrainfo);
+
         if (results.size() > 0) {
             String ownerstr;
             String extraInfo = "";
@@ -414,40 +427,49 @@ class CommandListener implements CommandExecutor {
     }
 
     private ItemStack getItem(CommandSender sender, String search) {
-        ItemStack result;
-        if (search.equalsIgnoreCase("hand") || search.equalsIgnoreCase("handexact")) {
+        if (search.equalsIgnoreCase("hand")) {
             if (!(sender instanceof Player)) {
                 return null;
             }
             Player ply = (Player) sender;
             ItemStack hand = ply.getInventory().getItemInMainHand();
             if (hand.getType() != Material.AIR) {
-                if (search.equalsIgnoreCase("hand")) {
-                    result = new ItemStack(hand.getType(), 1);
-                } else {
-                    result = hand.clone();
-                }
+                return hand.clone();
             } else {
                 sender.sendMessage(ChatColor.RED + "You need to be holding an item first!");
                 return null;
             }
         } else {
             try {
-                Material searchFor = getItem(search);
-                if (searchFor == null) {
-                    sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
+                if (search.substring(0, 3).equals("sf_")) {
+                    // Searching for Slimefun item
+                    if (search.length() > 3) {
+                        String sfname = search.substring(3).toUpperCase();
+                        sfDBItem sfitem = plugin.sfNameDB.getSFItem(sfname);
+                        if (sfitem != null) {
+                            // Return the Slimefun item for searching
+                            return plugin.makeSlimefunItem(new ItemStack(sfitem.mat, 1), sfitem);
+                        }
+                    }
+                    sender.sendMessage(ChatColor.RED + "Invalid Slimefun item name");
                     return null;
+                } else {
+                    // Vanilla item search
+                    Material searchFor = getItem(search);
+                    if (searchFor == null) {
+                        sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
+                        return null;
+                    }
+                    return new ItemStack(searchFor, 1);
                 }
-                result = new ItemStack(searchFor, 1);
             } catch (Exception e) {
                 sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
                 plugin.debug("Exception caught: " + e.getCause());
                 plugin.debug(e.getMessage());
                 plugin.debug(e.getStackTrace().toString());
-                return null;
             }
         }
-        return result;
+        return null;
     }
 
     private Material getItem(String search) {
@@ -459,7 +481,6 @@ class CommandListener implements CommandExecutor {
             plugin.debug("Warning: getMaterial() returned null for: " + itemName);
             return null;
         }
-        plugin.debug("getMaterial returned: " + def.name());
 
         // Check if we should override the data value with one supplied
         if (parts.length > 1) {

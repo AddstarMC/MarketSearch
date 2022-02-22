@@ -3,6 +3,7 @@ package au.com.addstar.marketsearch;
 import au.com.addstar.marketsearch.plotproviders.PlotProvider;
 import au.com.addstar.marketsearch.plotproviders.PlotSquaredPlotProvider;
 import au.com.addstar.marketsearch.plotproviders.USkyBlockProvider;
+import au.com.addstar.marketsearch.SlimefunNameDB.sfDBItem;
 import au.com.addstar.monolith.util.PotionUtil;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.*;
@@ -15,6 +16,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
@@ -25,7 +28,6 @@ import org.maxgamer.quickshop.api.shop.ShopChunk;
 import org.maxgamer.quickshop.api.shop.ShopManager;
 import org.maxgamer.quickshop.api.shop.ShopType;
 import org.maxgamer.quickshop.util.RomanNumber;
-import org.maxgamer.quickshop.util.Util;
 import us.talabrek.ultimateskyblock.api.uSkyBlockAPI;
 
 import java.io.File;
@@ -54,6 +56,9 @@ public class MarketSearch extends JavaPlugin {
     private ShopManager quickShopManager = null;
     private PlotProvider plotProvider;
     private PluginDescriptionFile pdfFile = null;
+    private final Plugin sfPlugin = getServer().getPluginManager().getPlugin("Slimefun");
+    private final NamespacedKey sfNSItemKey = new NamespacedKey(sfPlugin, "slimefun_item");
+    public SlimefunNameDB sfNameDB = new SlimefunNameDB();
 
     boolean isDebugEnabled() {
         return debugEnabled;
@@ -113,8 +118,10 @@ public class MarketSearch extends JavaPlugin {
                 log("PlotProvider: PlotSquared hooked");
             }
         }
+
         marketWorld = (config != null) ? config.getString("world", "market") : "market";
         loadEnchants();
+        loadSlimefunNameDB();
         String commandText = "marketsearch";
         PluginCommand command = getCommand(commandText);
         if (command != null) {
@@ -143,6 +150,20 @@ public class MarketSearch extends JavaPlugin {
         }
     }
 
+    private void loadSlimefunNameDB() {
+        File file = new File(getDataFolder(), "slimefun.csv");
+
+        try {
+            if (!file.exists())
+                sfNameDB.load(getResource("slimefun.csv"));
+            else
+                sfNameDB.load(file);
+        } catch (IOException e) {
+            getLogger().severe("Unable to load Slimefun item name database");
+            e.printStackTrace();
+        }
+    }
+
     private void updateConfig(File file) throws IOException {
         config.addDefault("world", "market");
         config.options().copyDefaults(true);
@@ -164,6 +185,9 @@ public class MarketSearch extends JavaPlugin {
         int noSpaceCount = 0;
         long totalTime = 0;
         long shopResultTime = 0;
+        sfDBItem sfSearch = getSlimefunItemType(searchItem);
+        if (sfSearch != null)
+            debug("Item Slimefun type: " + sfSearch.fullname + " (" + sfSearch.sfname + ")");
 
         Material itemType = searchItem.getType();
 
@@ -173,24 +197,43 @@ public class MarketSearch extends JavaPlugin {
             for (Entry<ShopChunk, Map<Location, Shop>> chunks : map.entrySet()) {
                 for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
                     try {
+                        boolean skipresult = false;
                         final Shop shop = inChunk.getValue();
                         ItemStack shopItem = shop.getItem();
+
                         if (shopItem.getType() != itemType) {
-                            // Wrong item
+                            // Wrong item type - skipped
+                            skipresult = true;
+                        }
+                        else if (sfSearch != null) {
+                            // Searching for Slimefun item, check if this one matches
+                            sfDBItem sfItem = getSlimefunItemType(shopItem);
+                            if ((sfItem == null) || (sfItem.sfname != sfSearch.sfname)) {
+                                skipresult = true;
+                            }
+                        } else {
+                            // Vanilla search and item is the right type
+                            // Ensure this is not also a Slimefun item
+                            if (hasSlimefunMeta(shopItem))
+                                skipresult = true;
+                        }
+
+                        if (skipresult) {
                             if (debugEnabled) {
                                 wrongItemCount++;
                                 if (wrongItemCount <= maxDetailedCount && debugLevel > 1) {
                                     logger.info("No match to " + shopItem.getType().name() + " in shop at "
-                                          + shop.getLocation().getBlockX() + " " + shop.getLocation().getBlockY()
-                                          + " " + shop.getLocation().getBlockZ());
+                                            + shop.getLocation().getBlockX() + " " + shop.getLocation().getBlockY()
+                                            + " " + shop.getLocation().getBlockZ());
                                     if (wrongItemCount == maxDetailedCount) {
                                         logger.info(" ... max wrong item count limit reached; no more "
-                                              + "items will be logged");
+                                                + "items will be logged");
                                     }
                                 }
                             }
                             continue;
                         }
+
                         long startshop = System.nanoTime();
                         ShopResult shopResult;
                         try {
@@ -252,9 +295,7 @@ public class MarketSearch extends JavaPlugin {
 
                         // Is this an enchanted book?
                         if (shopItem.getType() == Material.ENCHANTED_BOOK) {
-
                             EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta) shopItem.getItemMeta();
-
                             if (bookMeta != null && bookMeta.hasStoredEnchants()) {
                                 // Store the enchantment(s)
                                 shopResult.enchanted = true;
@@ -343,6 +384,38 @@ public class MarketSearch extends JavaPlugin {
             warn("Unable to find plot! " + result.shopLocation.toString());
         }
         results.add(result);
+    }
+
+    public boolean hasSlimefunMeta(ItemStack item) {
+        PersistentDataContainer container = item.getItemMeta().getPersistentDataContainer();
+        if (container.has(sfNSItemKey, PersistentDataType.STRING)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public sfDBItem getSlimefunItemType(ItemStack item) {
+        if (hasSlimefunMeta(item)) {
+            PersistentDataContainer container = item.getItemMeta().getPersistentDataContainer();
+            String sfname = container.get(sfNSItemKey, PersistentDataType.STRING).toUpperCase();
+            debug("Item is a Slimefun \"" + sfname + "\"");
+            return sfNameDB.getSFItem(sfname);
+        } else {
+            debug("Item is NOT Slimefun");
+            return null;
+        }
+    }
+
+    public ItemStack makeSlimefunItem(ItemStack item, SlimefunNameDB.sfDBItem sfdbitem) {
+        if (sfdbitem != null) {
+            ItemMeta meta = item.getItemMeta();
+            Plugin sfplugin = getServer().getPluginManager().getPlugin("Slimefun");
+            NamespacedKey key = new NamespacedKey(sfplugin, "slimefun_item");
+            meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, sfdbitem.sfname);
+            item.setItemMeta(meta);
+        }
+        return item;
     }
 
     public String getEnchantText(Map<Enchantment, Integer> enchants) {
@@ -441,7 +514,7 @@ public class MarketSearch extends JavaPlugin {
     }
 
     void debug(String data) {
-        if (debugEnabled) {
+        if ((debugEnabled) && (debugLevel > 0)) {
             logger.info(pdfFile.getName() + " " + data);
         }
     }

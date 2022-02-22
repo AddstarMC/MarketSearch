@@ -139,6 +139,7 @@
                 <directory>${basedir}/src/resources</directory>
                 <includes>
                     <include>*.yml</include>
+                    <include>*.csv</include>
                 </includes>
             </resource>
         </resources>
