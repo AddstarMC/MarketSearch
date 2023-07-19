@@ -451,7 +451,7 @@ public class MarketSearch extends JavaPlugin {
 
     private void loadEnchants() {
         enchantMap.clear();
-        enchantMap.put(Enchantment.ARROW_DAMAGE, "pierce");
+        enchantMap.put(Enchantment.ARROW_DAMAGE, "power");
         enchantMap.put(Enchantment.ARROW_FIRE, "flame");
         enchantMap.put(Enchantment.ARROW_INFINITE, "inf");
         enchantMap.put(Enchantment.ARROW_KNOCKBACK, "punch");
