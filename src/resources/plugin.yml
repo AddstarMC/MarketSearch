@@ -3,7 +3,7 @@ main: au.com.addstar.marketsearch.MarketSearch
 version: ${plugin.version}
 api-version: ${spigot.api.version}
 author: add5tar
-softdepend: [Multiverse-Core, My Worlds, QuickShop, PlotMe, PlotSquared, Slimefun]
+softdepend: [Multiverse-Core, My_Worlds, QuickShop, PlotMe, PlotSquared, Slimefun]
 website:  ${project.url}
 dev-url: ${project.url}
 description: ${project.description}
