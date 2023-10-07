@@ -56,9 +56,10 @@ public class MarketSearch extends JavaPlugin {
     private ShopManager quickShopManager = null;
     private PlotProvider plotProvider;
     private PluginDescriptionFile pdfFile = null;
-    private final Plugin sfPlugin = getServer().getPluginManager().getPlugin("Slimefun");
-    private final NamespacedKey sfNSItemKey = new NamespacedKey(sfPlugin, "slimefun_item");
+    private Plugin sfPlugin = null;
+    private NamespacedKey sfNSItemKey = null;
     public SlimefunNameDB sfNameDB = new SlimefunNameDB();
+    public boolean sfEnabled = false;
 
     boolean isDebugEnabled() {
         return debugEnabled;
@@ -119,9 +120,18 @@ public class MarketSearch extends JavaPlugin {
             }
         }
 
+        if (pm.getPlugin("Slimefun") != null) {
+            sfPlugin = pm.getPlugin("Slimefun");
+            if (sfPlugin != null && sfPlugin.isEnabled()) {
+                NamespacedKey sfNSItemKey = new NamespacedKey(sfPlugin, "slimefun_item");
+                sfEnabled = true;
+                log("Slimefun integration enabled");
+            }
+        }
+
         marketWorld = (config != null) ? config.getString("world", "market") : "market";
         loadEnchants();
-        loadSlimefunNameDB();
+        if (sfEnabled) loadSlimefunNameDB();
         String commandText = "marketsearch";
         PluginCommand command = getCommand(commandText);
         if (command != null) {
@@ -185,9 +195,14 @@ public class MarketSearch extends JavaPlugin {
         int noSpaceCount = 0;
         long totalTime = 0;
         long shopResultTime = 0;
-        sfDBItem sfSearch = getSlimefunItemType(searchItem);
-        if (sfSearch != null)
-            debug("Item Slimefun type: " + sfSearch.fullname + " (" + sfSearch.sfname + ")");
+        sfDBItem sfSearch = null;
+
+        // Only do Slimefun searches if the Slimefun plugin is loaded
+        if (sfEnabled) {
+            sfSearch = getSlimefunItemType(searchItem);
+            if (sfSearch != null)
+                debug("Item Slimefun type: " + sfSearch.fullname + " (" + sfSearch.sfname + ")");
+        }
 
         Material itemType = searchItem.getType();
 
@@ -214,7 +229,7 @@ public class MarketSearch extends JavaPlugin {
                         } else {
                             // Vanilla search and item is the right type
                             // Ensure this is not also a Slimefun item
-                            if (hasSlimefunMeta(shopItem))
+                            if (sfEnabled && hasSlimefunMeta(shopItem))
                                 skipresult = true;
                         }
 

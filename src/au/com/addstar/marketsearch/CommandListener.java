@@ -315,13 +315,15 @@ class CommandListener implements CommandExecutor {
         int perPage = 10;
         int pages = (int) Math.ceil((double) results.size() / perPage);
 
-        sfDBItem sfitem = plugin.getSlimefunItemType(searchFor);
-        String initialCapsName;
-        if (sfitem != null) {
-            initialCapsName = ChatColor.GOLD + "Slimefun: "
-                + ChatColor.YELLOW + MarketSearch.initialCaps(sfitem.sfname);
-        } else {
-            initialCapsName = ChatColor.AQUA + MarketSearch.initialCaps(searchFor.getType().name());
+        String initialCapsName = ChatColor.AQUA + MarketSearch.initialCaps(searchFor.getType().name());
+        sfDBItem sfitem = null;
+
+        if (plugin.sfEnabled) {
+            sfitem = plugin.getSlimefunItemType(searchFor);
+            if (sfitem != null) {
+                initialCapsName = ChatColor.GOLD + "Slimefun: "
+                        + ChatColor.YELLOW + MarketSearch.initialCaps(sfitem.sfname);
+            }
         }
 
         if (page > pages) {
@@ -335,7 +337,7 @@ class CommandListener implements CommandExecutor {
         }
 
         StringBuilder extrainfo = new StringBuilder();
-        if (sfitem != null) {
+        if (plugin.sfEnabled && sfitem != null) {
             extrainfo.append(sfitem.fullname);
             plugin.debug(initialCapsName + " (" + extrainfo + ")");
         } else {
@@ -441,7 +443,7 @@ class CommandListener implements CommandExecutor {
             }
         } else {
             try {
-                if (search.substring(0, 3).equals("sf_")) {
+                if ((plugin.sfEnabled) && (search.substring(0, 3).equals("sf_"))) {
                     // Searching for Slimefun item
                     if (search.length() > 3) {
                         String sfname = search.substring(3).toUpperCase();
