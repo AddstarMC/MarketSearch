@@ -20,7 +20,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
-import org.maxgamer.quickshop.api.shop.ShopType;
+import com.ghostchu.quickshop.api.shop.ShopType;
 
 import java.util.ArrayList;
 import java.util.List;

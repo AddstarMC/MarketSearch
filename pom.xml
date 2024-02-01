@@ -92,10 +92,11 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.maxgamer</groupId>
-            <artifactId>QuickShop</artifactId>
-            <version>5.1.0.3</version>
+            <groupId>com.ghostchu</groupId>
+            <artifactId>quickshop-bukkit</artifactId>
+            <version>5.2.0.14</version>
             <scope>provided</scope>
+            <classifier>shaded</classifier>
         </dependency>
         <dependency>
             <groupId>au.com.addstar</groupId>

@@ -22,12 +22,12 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.maxgamer.quickshop.api.QuickShopAPI;
-import org.maxgamer.quickshop.api.shop.Shop;
-import org.maxgamer.quickshop.api.shop.ShopChunk;
-import org.maxgamer.quickshop.api.shop.ShopManager;
-import org.maxgamer.quickshop.api.shop.ShopType;
-import org.maxgamer.quickshop.util.RomanNumber;
+import com.ghostchu.quickshop.api.QuickShopAPI;
+import com.ghostchu.quickshop.api.shop.Shop;
+import com.ghostchu.quickshop.api.shop.ShopChunk;
+import com.ghostchu.quickshop.api.shop.ShopManager;
+import com.ghostchu.quickshop.api.shop.ShopType;
+import com.ghostchu.quickshop.common.util.RomanNumber;
 import us.talabrek.ultimateskyblock.api.uSkyBlockAPI;
 
 import java.io.File;
@@ -369,7 +369,7 @@ public class MarketSearch extends JavaPlugin {
             return results;
         }
         debug("Getting shops for " + player);
-        List<Shop> shops = quickShopManager.getPlayerAllShops(player.getUniqueId());
+        List<Shop> shops = quickShopManager.getAllShops(player.getUniqueId());
         if (shops != null) {
             debug("Searching " + shops.size() + "x player shops...");
             for (Shop shop : shops) {
@@ -615,7 +615,7 @@ public class MarketSearch extends JavaPlugin {
     private ShopResult storeResult(Shop shop) {
         ShopResult result = new ShopResult();
         ItemStack foundItem = shop.getItem();
-        result.shopOwner = shop.ownerName();    // name
+        result.shopOwner = shop.ownerName().toString();
         result.type = foundItem.getType().name();
         result.itemName = initialCaps(foundItem.getType().name());
         result.stock = shop.getRemainingStock();
