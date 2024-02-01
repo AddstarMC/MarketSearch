@@ -5,6 +5,7 @@ import au.com.addstar.marketsearch.plotproviders.PlotSquaredPlotProvider;
 import au.com.addstar.marketsearch.plotproviders.USkyBlockProvider;
 import au.com.addstar.marketsearch.SlimefunNameDB.sfDBItem;
 import au.com.addstar.monolith.util.PotionUtil;
+import net.kyori.adventure.text.TextComponent;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
@@ -615,7 +616,8 @@ public class MarketSearch extends JavaPlugin {
     private ShopResult storeResult(Shop shop) {
         ShopResult result = new ShopResult();
         ItemStack foundItem = shop.getItem();
-        result.shopOwner = String.valueOf(shop.ownerName());
+        TextComponent owner = (TextComponent)shop.ownerName();
+        result.shopOwner = owner.content();
         result.type = foundItem.getType().name();
         result.itemName = initialCaps(foundItem.getType().name());
         result.stock = shop.getRemainingStock();
