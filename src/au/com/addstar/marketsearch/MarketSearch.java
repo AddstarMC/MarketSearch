@@ -96,11 +96,11 @@ public class MarketSearch extends JavaPlugin {
         configure();
         PluginManager pm = this.getServer().getPluginManager();
 
-        if (pm.getPlugin("QuickShop") != null) {
-            QuickShopAPI qsapi = (QuickShopAPI)pm.getPlugin("QuickShop");
+        if (pm.getPlugin("QuickShop-Hikari") != null) {
+            QuickShopAPI qsapi = (QuickShopAPI)pm.getPlugin("QuickShop-Hikari");
             if (qsapi != null) {
                 quickShopManager = qsapi.getShopManager();
-                log("PlotProvider: QuickShop hooked");
+                log("PlotProvider: QuickShop-Hikari hooked");
             }
         }
 
