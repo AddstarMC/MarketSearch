@@ -97,7 +97,7 @@ public class MarketSearch extends JavaPlugin {
         PluginManager pm = this.getServer().getPluginManager();
 
         if (pm.getPlugin("QuickShop-Hikari") != null) {
-            QuickShopAPI qsapi = (QuickShopAPI)pm.getPlugin("QuickShop-Hikari");
+            QuickShopAPI qsapi = QuickShopAPI.getInstance();
             if (qsapi != null) {
                 quickShopManager = qsapi.getShopManager();
                 log("PlotProvider: QuickShop-Hikari hooked");
@@ -615,7 +615,7 @@ public class MarketSearch extends JavaPlugin {
     private ShopResult storeResult(Shop shop) {
         ShopResult result = new ShopResult();
         ItemStack foundItem = shop.getItem();
-        result.shopOwner = shop.ownerName().toString();
+        result.shopOwner = String.valueOf(shop.ownerName());
         result.type = foundItem.getType().name();
         result.itemName = initialCaps(foundItem.getType().name());
         result.stock = shop.getRemainingStock();
