@@ -124,9 +124,13 @@ public class MarketSearch extends JavaPlugin {
         if (pm.getPlugin("Slimefun") != null) {
             sfPlugin = pm.getPlugin("Slimefun");
             if (sfPlugin != null && sfPlugin.isEnabled()) {
-                NamespacedKey sfNSItemKey = new NamespacedKey(sfPlugin, "slimefun_item");
-                sfEnabled = true;
-                log("Slimefun integration enabled");
+                sfNSItemKey = new NamespacedKey(sfPlugin, "slimefun_item");
+                if (sfNSItemKey != null) {
+                    sfEnabled = true;
+                    log("Slimefun integration enabled");
+                } else {
+                    warn("Slimefun was detected but was unable to create a NamespacedKey. Slimefun integration disabled.");
+                }
             }
         }
 
