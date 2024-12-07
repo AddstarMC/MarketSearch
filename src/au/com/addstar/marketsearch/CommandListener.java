@@ -226,11 +226,28 @@ class CommandListener implements CommandExecutor {
                             Location signloc = sign.getLocation();
                             signloc.setDirection(bf.getOppositeFace().getDirection());
                             signloc.add(0.5, 0, 0.5);
+                            final Player player = (Player) sender;
 
-                            Location tmp = signloc.clone();
-                            if (tmp.add(0, 1, 0).getBlock().isEmpty()) {
-                                Player player = (Player) sender;
-                                player.teleport(signloc);
+                            if (signloc.getWorld().getBlockAt(signloc.getBlockX(), signloc.getBlockY(), signloc.getBlockZ()).isEmpty()) {
+                                if (!player.hasPermission("marketsearch.tptodelay.bypass")) {
+                                    // Add a teleport delay before teleporting the player to check for movement
+                                    // to prevent the player using this to avoid death
+                                    final Location lastLocation = player.getLocation();
+                                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&6Teleportation will commence in &c3 seconds&6. Don't move."));
+                                    plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                                        if (player.isOnline()) {
+                                            if (lastLocation.getBlock().equals(player.getLocation().getBlock())) {
+                                                player.sendMessage(ChatColor.GOLD + "Teleportation commencing...");
+                                                player.teleport(signloc);
+                                            } else {
+                                                player.sendMessage(ChatColor.RED + "Teleportation aborted because you moved.");
+                                            }
+                                        }
+                                    }, 60L);
+                                } else {
+                                    // Teleport the player immediately if they have bypass permission
+                                    player.teleport(signloc);
+                                }
                             } else {
                                 sender.sendMessage(ChatColor.RED
                                       + "Sorry, unable to find a clear location to send you to.");
