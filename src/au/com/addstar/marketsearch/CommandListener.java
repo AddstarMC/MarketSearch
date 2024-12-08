@@ -228,7 +228,7 @@ class CommandListener implements CommandExecutor {
                             signloc.add(0.5, 0, 0.5);
                             final Player player = (Player) sender;
 
-                            if (signloc.getWorld().getBlockAt(signloc.getBlockX(), signloc.getBlockY(), signloc.getBlockZ()).isEmpty()) {
+                            if (signloc.getWorld().getBlockAt(signloc.getBlockX(), signloc.getBlockY()+1, signloc.getBlockZ()).isEmpty()) {
                                 if (!player.hasPermission("marketsearch.tptodelay.bypass")) {
                                     // Add a teleport delay before teleporting the player to check for movement
                                     // to prevent the player using this to avoid death
