@@ -9,7 +9,7 @@ import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -17,6 +17,7 @@ import org.bukkit.block.data.Directional;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -37,6 +38,8 @@ class CommandListener implements CommandExecutor {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String commandLabel,
                              String[] args) {
         final String action = (args.length > 0) ? args[0].toUpperCase() : "";
+        final Player player = sender instanceof Player ? (Player) sender : null;
+
         switch (action) {
             case "FIND":
             case "SELL":
@@ -47,6 +50,13 @@ class CommandListener implements CommandExecutor {
 
                 if (args.length == 1) {
                     plugin.sendHelp(sender);
+                    return true;
+                }
+
+                // Check if they’re already searching:
+                final SearchManager smgr = plugin.getSearchManager();
+                if (smgr.isSearching(player)) {
+                    player.sendMessage(ChatColor.RED + "You already have a search in progress!");
                     return true;
                 }
 
@@ -78,14 +88,16 @@ class CommandListener implements CommandExecutor {
                 final String finalSearch = search;
                 final int finalPage = page;
                 Bukkit.getScheduler().runTaskAsynchronously(this.plugin, () -> {
+                    smgr.startSearch(player, ChatColor.YELLOW + "Market Search: " + ChatColor.GOLD + finalSearch);
                     List<ShopResult> resultsUnfiltered;
                     if (action.equals("SELL")) {
-                        resultsUnfiltered = plugin.searchMarket(searchFor, ShopType.BUYING);
+                        resultsUnfiltered = plugin.searchMarket(player, searchFor, ShopType.BUYING);
                     } else {
-                        resultsUnfiltered = plugin.searchMarket(searchFor, ShopType.SELLING);
+                        resultsUnfiltered = plugin.searchMarket(player, searchFor, ShopType.SELLING);
                     }
 
                     handleSearchResults(action, finalSearch, resultsUnfiltered, sender, searchFor, finalPage);
+                    smgr.cancelSearch(player);
                 });
                 return true;
             case "STOCK":
@@ -226,7 +238,6 @@ class CommandListener implements CommandExecutor {
                             Location signloc = sign.getLocation();
                             signloc.setDirection(bf.getOppositeFace().getDirection());
                             signloc.add(0.5, 0, 0.5);
-                            final Player player = (Player) sender;
 
                             if (signloc.getWorld().getBlockAt(signloc.getBlockX(), signloc.getBlockY()+1, signloc.getBlockZ()).isEmpty()) {
                                 if (!player.hasPermission("marketsearch.tptodelay.bypass")) {
@@ -536,49 +547,29 @@ class CommandListener implements CommandExecutor {
         // Split on the colon
         String[] parts = search.split(":");
         String itemName = parts[0];
-        String itemEnchant;
 
         if (parts.length > 1 && !StringUtils.isNumeric(parts[1])) {
-            itemEnchant = parts[1];
-        } else {
-            itemEnchant = "";
+            Enchantment ench = plugin.getEnchantRegistry().fromAlias(parts[1]);
+            if (ench != null) {
+                // If the enchantment is registered, use its main alias
+                parts[1] = plugin.getEnchantRegistry().getMainAlias(ench);
+            }
         }
 
-        // Auto-change carrots to carrots and potatoes to potato
+        // Auto-change carrots to carrot and potatoes to potato
         if (itemName.equalsIgnoreCase("carrots")) {
             parts[0] = "CARROT";
         }
-        if (itemName.equalsIgnoreCase("potatoes")) {
+        else if (itemName.equalsIgnoreCase("potatoes") || itemName.equalsIgnoreCase("potatos")) {
             parts[0] = "POTATO";
         }
-        if (itemName.equalsIgnoreCase("diamond_pick")) {
+        else if (itemName.equalsIgnoreCase("diamond_pick")) {
             parts[0] = "DIAMOND_PICKAXE";
         }
-        if (itemName.toLowerCase().contains("arrow")) {
+        else if (itemName.toLowerCase().contains("arrow")) {
             if (parts.length > 1) {
                 parts[0] = Material.TIPPED_ARROW.name().toLowerCase();
             }
-        }
-        if (itemEnchant.equalsIgnoreCase("efficiency")) {
-            parts[1] = "eff";
-        }
-        if (itemEnchant.equalsIgnoreCase("fortune")) {
-            parts[1] = "fort";
-        }
-        if (itemEnchant.equalsIgnoreCase("respiration")) {
-            parts[1] = "air";
-        }
-        if (itemEnchant.equalsIgnoreCase("sharpness")) {
-            parts[1] = "dmg";
-        }
-        if (itemEnchant.equalsIgnoreCase("silktouch")) {
-            parts[1] = "silk";
-        }
-        if (itemEnchant.equalsIgnoreCase("silk_touch")) {
-            parts[1] = "silk";
-        }
-        if (itemEnchant.equalsIgnoreCase("unbreaking")) {
-            parts[1] = "dura";
         }
         return parts;
     }

@@ -2,11 +2,10 @@ package au.com.addstar.marketsearch;
 
 import au.com.addstar.marketsearch.plotproviders.PlotProvider;
 import au.com.addstar.marketsearch.plotproviders.PlotSquaredPlotProvider;
-import au.com.addstar.marketsearch.plotproviders.USkyBlockProvider;
 import au.com.addstar.marketsearch.SlimefunNameDB.sfDBItem;
 import au.com.addstar.monolith.util.PotionUtil;
 import net.kyori.adventure.text.TextComponent;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
@@ -29,14 +28,12 @@ import com.ghostchu.quickshop.api.shop.ShopChunk;
 import com.ghostchu.quickshop.api.shop.ShopManager;
 import com.ghostchu.quickshop.api.shop.ShopType;
 import com.ghostchu.quickshop.common.util.RomanNumber;
-import us.talabrek.ultimateskyblock.api.uSkyBlockAPI;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -46,9 +43,9 @@ import java.util.concurrent.FutureTask;
 import java.util.logging.Logger;
 
 public class MarketSearch extends JavaPlugin {
-
+    private static MarketSearch instance;
     private static final Logger logger = Logger.getLogger("Minecraft");
-    private final Map<Enchantment, String> enchantMap = new HashMap<>();
+    private final EnchantAliasRegistry enchantRegistry = new EnchantAliasRegistry(this);
     private boolean debugEnabled = false;
     private FileConfiguration config;
     // Higher numbers lead to more debug messages
@@ -61,6 +58,11 @@ public class MarketSearch extends JavaPlugin {
     private NamespacedKey sfNSItemKey = null;
     public SlimefunNameDB sfNameDB = new SlimefunNameDB();
     public boolean sfEnabled = false;
+    private SearchManager searchManager;
+
+    public static MarketSearch getInstance() {
+        return instance;
+    }
 
     boolean isDebugEnabled() {
         return debugEnabled;
@@ -92,6 +94,13 @@ public class MarketSearch extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        Plugin plugin = Bukkit.getPluginManager().getPlugin("MarketSearch");
+        if (plugin instanceof MarketSearch) {
+            instance = (MarketSearch) plugin;
+        } else {
+            throw new IllegalStateException("MarketSearch plugin is not enabled or not found");
+        }
+
         // Register necessary events
         pdfFile = this.getDescription();
         configure();
@@ -102,14 +111,6 @@ public class MarketSearch extends JavaPlugin {
             if (qsapi != null) {
                 quickShopManager = qsapi.getShopManager();
                 log("PlotProvider: QuickShop-Hikari hooked");
-            }
-        }
-
-        if (pm.getPlugin("uSkyBlock") != null) {
-            Plugin uskyBlock = pm.getPlugin("uSkyBlock");
-            if (uskyBlock != null && uskyBlock.isEnabled()) {
-                plotProvider = new USkyBlockProvider((uSkyBlockAPI) uskyBlock);
-                log("PlotProvider: uSkyBlock hooked");
             }
         }
 
@@ -135,8 +136,13 @@ public class MarketSearch extends JavaPlugin {
         }
 
         marketWorld = (config != null) ? config.getString("world", "market") : "market";
-        loadEnchants();
+        enchantRegistry.loadEnchants();
         if (sfEnabled) loadSlimefunNameDB();
+        this.searchManager = new SearchManager(this);
+
+        // Register the PlayerListener
+        pm.registerEvents(new PlayerListener(), this);
+
         String commandText = "marketsearch";
         PluginCommand command = getCommand(commandText);
         if (command != null) {
@@ -190,7 +196,15 @@ public class MarketSearch extends JavaPlugin {
         // Nothing yet
     }
 
-    public List<ShopResult> searchMarket(ItemStack searchItem, ShopType searchType) {
+    public EnchantAliasRegistry getEnchantRegistry() {
+        return enchantRegistry;
+    }
+
+    public SearchManager getSearchManager() {
+        return searchManager;
+    }
+
+    public List<ShopResult> searchMarket(Player player, ItemStack searchItem, ShopType searchType) {
         List<ShopResult> results = new ArrayList<>();
         Map<ShopChunk, Map<Location, Shop>> map = quickShopManager.getShops(marketWorld);
 
@@ -209,12 +223,25 @@ public class MarketSearch extends JavaPlugin {
                 debug("Item Slimefun type: " + sfSearch.fullname + " (" + sfSearch.sfname + ")");
         }
 
+        final SearchManager smgr = getSearchManager();
         Material itemType = searchItem.getType();
 
         long startmain = System.nanoTime();
         if (map != null) {
+            int totalChunks = map.size();
+            int chunkCount = 0;
             debug("Searching " + map.size() + " shops for item " + getItemDetails(searchItem));
             for (Entry<ShopChunk, Map<Location, Shop>> chunks : map.entrySet()) {
+                chunkCount++;
+                double chunkProgress = (chunkCount / (double) totalChunks);
+                debug("Searching chunk " + chunkCount + " of " + totalChunks + " (" + (chunkProgress * 100) + "%)");
+                if (smgr.isSearching(player)) {
+                    smgr.updateProgress(player, chunkProgress);
+                } else {
+                    // Player is not searching, so we can skip this
+                    debug("Player is not searching, skipping progress update");
+                }
+
                 for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
                     try {
                         boolean skipresult = false;
@@ -308,7 +335,7 @@ public class MarketSearch extends JavaPlugin {
                                   + "; storing");
                         }
                         // Is this item enchanted?
-                        if (shopItem.getEnchantments().size() > 0) {
+                        if (!shopItem.getEnchantments().isEmpty()) {
                             shopResult.enchants = shopItem.getEnchantments();
                             shopResult.enchanted = true;
                         }
@@ -456,7 +483,7 @@ public class MarketSearch extends JavaPlugin {
             Integer level = e.getValue();
             String abbr;
             if (abbreviate) {
-                abbr = enchantMap.get(enchant);
+                abbr = enchantRegistry.getMainAlias(enchant);
                 if (abbr == null) {
                     abbr = "??";
                 }
@@ -467,47 +494,6 @@ public class MarketSearch extends JavaPlugin {
             enchantList.add(abbr + " " + roman);
         }
         return StringUtils.join(enchantList.toArray(), "/");
-    }
-
-    private void loadEnchants() {
-        enchantMap.clear();
-        enchantMap.put(Enchantment.ARROW_DAMAGE, "power");
-        enchantMap.put(Enchantment.ARROW_FIRE, "flame");
-        enchantMap.put(Enchantment.ARROW_INFINITE, "inf");
-        enchantMap.put(Enchantment.ARROW_KNOCKBACK, "punch");
-        enchantMap.put(Enchantment.BINDING_CURSE, "binding");
-        enchantMap.put(Enchantment.CHANNELING, "channel");
-        enchantMap.put(Enchantment.DAMAGE_ALL, "dmg");        // Sharpness
-        enchantMap.put(Enchantment.DAMAGE_ARTHROPODS, "bane");
-        enchantMap.put(Enchantment.DAMAGE_UNDEAD, "smite");
-        enchantMap.put(Enchantment.DEPTH_STRIDER, "strider");
-        enchantMap.put(Enchantment.DIG_SPEED, "eff");
-        enchantMap.put(Enchantment.DURABILITY, "dura");
-        enchantMap.put(Enchantment.FIRE_ASPECT, "fire");
-        enchantMap.put(Enchantment.FROST_WALKER, "frost");
-        enchantMap.put(Enchantment.IMPALING, "impale");
-        enchantMap.put(Enchantment.KNOCKBACK, "knock");
-        enchantMap.put(Enchantment.LOOT_BONUS_BLOCKS, "fort");
-        enchantMap.put(Enchantment.LOOT_BONUS_MOBS, "loot");
-        enchantMap.put(Enchantment.LOYALTY, "loyal");
-        enchantMap.put(Enchantment.LUCK, "luck");
-        enchantMap.put(Enchantment.LURE, "lure");
-        enchantMap.put(Enchantment.MENDING, "mend");
-        enchantMap.put(Enchantment.MULTISHOT, "multi");
-        enchantMap.put(Enchantment.OXYGEN, "air");
-        enchantMap.put(Enchantment.PIERCING, "pierce");
-        enchantMap.put(Enchantment.PROTECTION_ENVIRONMENTAL, "prot");
-        enchantMap.put(Enchantment.PROTECTION_EXPLOSIONS, "blast");
-        enchantMap.put(Enchantment.PROTECTION_FALL, "fall");
-        enchantMap.put(Enchantment.PROTECTION_FIRE, "fireprot");
-        enchantMap.put(Enchantment.PROTECTION_PROJECTILE, "proj");
-        enchantMap.put(Enchantment.QUICK_CHARGE, "charge");
-        enchantMap.put(Enchantment.RIPTIDE, "rip");
-        enchantMap.put(Enchantment.SILK_TOUCH, "silk");
-        enchantMap.put(Enchantment.SWEEPING_EDGE, "sweep");
-        enchantMap.put(Enchantment.THORNS, "thorn");
-        enchantMap.put(Enchantment.VANISHING_CURSE, "vanish");
-        enchantMap.put(Enchantment.WATER_WORKER, "aqua");
     }
 
     private String getItemDetails(ItemStack item) {

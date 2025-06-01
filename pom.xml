@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>MarketSearch</groupId>
     <artifactId>MarketSearch</artifactId>
-    <version>1.17.1</version>
+    <version>1.20</version>
     <name>MarketSearch</name>
     <description>A set of helper commands to assist with QuickShop/Plot market worlds</description>
     <url>https://github.com/AddstarMC/MarketSearch</url>
@@ -11,8 +11,8 @@
         <build.number/>
         <plugin.version>${project.version}-${build.number}</plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spigot.api.version>1.17</spigot.api.version>
-        <spigot.version>1.17.1-R0.1-SNAPSHOT</spigot.version>
+        <spigot.api.version>1.20</spigot.api.version>
+        <spigot.version>1.20.4-R0.1-SNAPSHOT</spigot.version>
     </properties>
     <scm>
         <connection>scm:git:git@github.com:AddstarMC/MarketSearch.git</connection>
@@ -63,6 +63,10 @@
             </releases>
         </repository>
         <repository>
+            <id>paper-repo</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+        <repository>
             <id>spigotmc-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
@@ -86,8 +90,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.spigotmc</groupId>
-            <artifactId>spigot-api</artifactId>
+            <groupId>io.papermc.paper</groupId>
+            <artifactId>paper-api</artifactId>
             <version>${spigot.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -121,13 +125,6 @@
             <groupId>com.plotsquared</groupId>
             <artifactId>PlotSquared-Bukkit</artifactId>
             <version>6.4.0</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.github.rlf</groupId>
-            <artifactId>uSkyBlock-API</artifactId>
-            <version>2.7.5</version>
-            <optional>true</optional>
             <scope>provided</scope>
         </dependency>
     </dependencies>
