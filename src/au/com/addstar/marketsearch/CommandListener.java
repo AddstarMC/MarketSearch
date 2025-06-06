@@ -472,7 +472,7 @@ class CommandListener implements CommandExecutor {
             }
         } else {
             try {
-                if ((plugin.sfEnabled) && (search.substring(0, 3).equals("sf_"))) {
+                if (plugin.sfEnabled && search.startsWith("sf_")) {
                     // Searching for Slimefun item
                     if (search.length() > 3) {
                         String sfname = search.substring(3).toUpperCase();
