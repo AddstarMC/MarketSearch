@@ -434,24 +434,41 @@ public class MarketSearch extends JavaPlugin {
     }
 
     public boolean hasSlimefunMeta(ItemStack item) {
-        PersistentDataContainer container = item.getItemMeta().getPersistentDataContainer();
-        if (container.has(sfNSItemKey, PersistentDataType.STRING)) {
-            return true;
-        } else {
+        if (item == null || !item.hasItemMeta()) {
             return false;
         }
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return false;
+        }
+
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        return container.has(sfNSItemKey, PersistentDataType.STRING);
     }
 
     public sfDBItem getSlimefunItemType(ItemStack item) {
-        if (hasSlimefunMeta(item)) {
-            PersistentDataContainer container = item.getItemMeta().getPersistentDataContainer();
-            String sfname = container.get(sfNSItemKey, PersistentDataType.STRING).toUpperCase();
-            debug("Item is a Slimefun \"" + sfname + "\"");
-            return sfNameDB.getSFItem(sfname);
-        } else {
+        if (!hasSlimefunMeta(item)) {
             debug("Item is NOT Slimefun");
             return null;
         }
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            debug("Item meta missing while checking Slimefun type");
+            return null;
+        }
+
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        String sfname = container.get(sfNSItemKey, PersistentDataType.STRING);
+        if (sfname == null) {
+            debug("Slimefun key not present despite meta check");
+            return null;
+        }
+
+        sfname = sfname.toUpperCase();
+        debug("Item is a Slimefun \"" + sfname + "\"");
+        return sfNameDB.getSFItem(sfname);
     }
 
     public ItemStack makeSlimefunItem(ItemStack item, SlimefunNameDB.sfDBItem sfdbitem) {
