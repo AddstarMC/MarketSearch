@@ -22,6 +22,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import com.ghostchu.quickshop.api.shop.ShopType;
+import java.util.Arrays;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -472,7 +473,7 @@ class CommandListener implements CommandExecutor {
             }
         } else {
             try {
-                if (plugin.sfEnabled && search.startsWith("sf_")) {
+                if (plugin.sfEnabled && hasSlimefunPrefix(search)) {
                     // Searching for Slimefun item
                     if (search.length() > 3) {
                         String sfname = search.substring(3).toUpperCase();
@@ -495,9 +496,8 @@ class CommandListener implements CommandExecutor {
                 }
             } catch (Exception e) {
                 sender.sendMessage(ChatColor.RED + "Invalid item name or ID");
-                plugin.debug("Exception caught: " + e.getCause());
-                plugin.debug(e.getMessage());
-                plugin.debug(e.getStackTrace().toString());
+                plugin.debug("Exception caught: " + e.getMessage());
+                plugin.debug(Arrays.toString(e.getStackTrace()));
             }
         }
         return null;
@@ -513,14 +513,9 @@ class CommandListener implements CommandExecutor {
             return null;
         }
 
-        // Check if we should override the data value with one supplied
-        if (parts.length > 1) {
-            try {
-                return def;
-            } catch (NumberFormatException e) {
-                plugin.debug("Warning: NumberFormatException caught in getItem()");
-            }
-        }
+        // In older versions this method parsed a data value from the second part
+        // of the search string. Modern Minecraft no longer uses numeric data
+        // values, so we simply return the material found above.
         return def;
     }
 
@@ -572,6 +567,10 @@ class CommandListener implements CommandExecutor {
             }
         }
         return parts;
+    }
+
+    static boolean hasSlimefunPrefix(String search) {
+        return search != null && search.toLowerCase().startsWith("sf_");
     }
 
     private void shopNotFound(Location loc) {
