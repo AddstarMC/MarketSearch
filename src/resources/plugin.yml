@@ -20,4 +20,7 @@ permissions:
     description: Can check own stock levels (/ms stock)
   marketsearch.stock.others:
     description: Can check other player's stock levels (/ms pstock)
-    
+  marketsearch.pricereduce.admin:
+    description: Can manage the offline price reduction routine (/ms pricereduce)
+    default: op
+

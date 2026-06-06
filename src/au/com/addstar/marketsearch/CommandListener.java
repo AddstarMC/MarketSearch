@@ -1,6 +1,7 @@
 package au.com.addstar.marketsearch;
 
 import au.com.addstar.marketsearch.MarketSearch.ShopResult;
+import au.com.addstar.marketsearch.pricereduction.PriceReductionManager;
 import au.com.addstar.marketsearch.SlimefunNameDB.sfDBItem;
 import au.com.addstar.monolith.lookup.Lookup;
 import com.google.common.base.Strings;
@@ -307,11 +308,91 @@ class CommandListener implements CommandExecutor {
                     sender.sendMessage(ChatColor.RED + "MS Debug is now on, debug level " + debugLevel);
                 }
                 break;
+            case "PRICEREDUCE":
+            case "PR":
+                if ((sender instanceof Player) && !sender.hasPermission("marketsearch.pricereduce.admin")) {
+                    return false;
+                }
+                handlePriceReduce(sender, args);
+                break;
             default:
                 plugin.sendHelp(sender);
                 break;
         }
         return true;
+    }
+
+    private void handlePriceReduce(CommandSender sender, String[] args) {
+        PriceReductionManager manager = plugin.getPriceReductionManager();
+        if (manager == null) {
+            sender.sendMessage(ChatColor.RED
+                  + "Price reduction is not enabled (check config price-reduction.enabled and the database).");
+            return;
+        }
+        String sub = (args.length > 1) ? args[1].toUpperCase() : "";
+        switch (sub) {
+            case "RUN":
+                sender.sendMessage(ChatColor.GREEN + "Starting price reduction run...");
+                manager.startRun(false, sender);
+                break;
+            case "DRYRUN":
+                if (args.length > 2) {
+                    resolveOwner(sender, args[2], uuid ->
+                          manager.startRunForOwner(true, sender, uuid));
+                } else {
+                    sender.sendMessage(ChatColor.GREEN + "Starting price reduction dry-run...");
+                    manager.startRun(true, sender);
+                }
+                break;
+            case "STATUS":
+                if (args.length < 3) {
+                    sender.sendMessage(ChatColor.RED + "Usage: /ms pricereduce status <player>");
+                    return;
+                }
+                resolveOwner(sender, args[2], uuid -> showStatus(sender, args[2], uuid));
+                break;
+            default:
+                sender.sendMessage(ChatColor.GREEN + "MarketSearch price reduction:");
+                sender.sendMessage(ChatColor.AQUA + "/ms pricereduce run" + ChatColor.WHITE
+                      + " - run the reduction now");
+                sender.sendMessage(ChatColor.AQUA + "/ms pricereduce dryrun [player]" + ChatColor.WHITE
+                      + " - preview without changing prices");
+                sender.sendMessage(ChatColor.AQUA + "/ms pricereduce status <player>" + ChatColor.WHITE
+                      + " - show a player's offline/reduction status");
+                break;
+        }
+    }
+
+    /** Resolves a player name to a UUID off the main thread, then runs the consumer on success. */
+    private void resolveOwner(CommandSender sender, String name, java.util.function.Consumer<java.util.UUID> consumer) {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            org.bukkit.OfflinePlayer p = Bukkit.getOfflinePlayer(name);
+            if (!p.hasPlayedBefore() && !p.isOnline()) {
+                sender.sendMessage(ChatColor.RED + "Unknown player: " + name);
+                return;
+            }
+            consumer.accept(p.getUniqueId());
+        });
+    }
+
+    private void showStatus(CommandSender sender, String name, java.util.UUID uuid) {
+        plugin.getPriceDatabase().getActivity(uuid).whenComplete((activity, err) -> {
+            if (err != null) {
+                sender.sendMessage(ChatColor.RED + "Failed to read status (see console).");
+                return;
+            }
+            if (activity == null) {
+                sender.sendMessage(ChatColor.YELLOW + name
+                      + " has no activity record yet (will be skipped until first tracked login).");
+                return;
+            }
+            long days = (System.currentTimeMillis() - activity.lastLogin()) / (24L * 60L * 60L * 1000L);
+            sender.sendMessage(ChatColor.GREEN + "Price reduction status for " + name + ":");
+            sender.sendMessage(ChatColor.YELLOW + " - Days since last login: " + ChatColor.WHITE + days);
+            plugin.getPriceDatabase().countReductionsSinceLogin(uuid).whenComplete((count, e2) ->
+                  sender.sendMessage(ChatColor.YELLOW + " - Reductions since last login: "
+                        + ChatColor.WHITE + (count == null ? 0 : count)));
+        });
     }
 
     private void handleSearchResults(String action, String search, List<ShopResult> resultsUnfiltered,

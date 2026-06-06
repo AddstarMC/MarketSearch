@@ -1,1 +1,32 @@
 world: "market"
+
+# ---------------------------------------------------------------------------
+# Price reduction for offline players
+# Slowly reduces prices on shops owned by players who have been offline for a
+# while, so abandoned shops stop distorting the market. Only SELLING shops in
+# the market world are ever adjusted, and only shops that still have stock.
+# Players are never charged a fee for reductions applied by this feature.
+# ---------------------------------------------------------------------------
+price-reduction:
+  enabled: false              # master switch (opt-in per server)
+  run-time: "02:00"           # daily run time, local server time (HH:mm)
+  offline-threshold-days: 60  # reductions start after a player is offline this long
+  percent: 0.02               # fraction to drop each run (0.02 = 2%)
+  min-drop: 0.01              # minimum absolute drop applied per run
+  min-price: 1.0              # global price floor; never reduce below this
+  shops-per-tick: 20          # main-thread budget; shops processed per tick
+  return-message: "&eSome of your shop prices were reduced due to your absence."
+  return-message-delay-ticks: 30
+  audit:
+    database: true            # write each adjustment to the audit table
+    log-file: true            # write each adjustment to price-reduction.log
+
+# MySQL connection (only used when price-reduction.enabled is true)
+database:
+  host: localhost
+  port: 3306
+  name: marketsearch
+  user: marketsearch
+  password: ""
+  table-prefix: "ms_"
+  pool-size: 4

@@ -5,6 +5,8 @@
 
 # User-specific stuff:
 .idea/
+.claude/
+.vscode/
 
 # Gradle:
 
@@ -17,6 +19,7 @@
 
 # IntelliJ
 /out/
+*.iml
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/

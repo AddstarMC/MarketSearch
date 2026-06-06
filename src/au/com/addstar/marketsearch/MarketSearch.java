@@ -2,6 +2,11 @@ package au.com.addstar.marketsearch;
 
 import au.com.addstar.marketsearch.plotproviders.PlotProvider;
 import au.com.addstar.marketsearch.plotproviders.PlotSquaredPlotProvider;
+import au.com.addstar.marketsearch.pricereduction.Database;
+import au.com.addstar.marketsearch.pricereduction.PriceActivityListener;
+import au.com.addstar.marketsearch.pricereduction.PriceReductionConfig;
+import au.com.addstar.marketsearch.pricereduction.PriceReductionManager;
+import au.com.addstar.marketsearch.pricereduction.PriceReductionScheduler;
 import au.com.addstar.marketsearch.SlimefunNameDB.sfDBItem;
 import au.com.addstar.monolith.util.PotionUtil;
 import org.apache.commons.lang3.StringUtils;
@@ -58,6 +63,9 @@ public class MarketSearch extends JavaPlugin {
     public SlimefunNameDB sfNameDB = new SlimefunNameDB();
     public boolean sfEnabled = false;
     private SearchManager searchManager;
+    private Database priceDatabase;
+    private PriceReductionManager priceReductionManager;
+    private PriceReductionScheduler priceReductionScheduler;
 
     public static MarketSearch getInstance() {
         return instance;
@@ -151,7 +159,45 @@ public class MarketSearch extends JavaPlugin {
             warn("MarketSearch command not found  - plugin will not execute commands -check yml");
         }
 
+        setupPriceReduction(pm);
+
         log(pdfFile.getName() + " " + pdfFile.getVersion() + " has been enabled");
+    }
+
+    private void setupPriceReduction(PluginManager pm) {
+        PriceReductionConfig prConfig = new PriceReductionConfig(config);
+        if (!prConfig.isEnabled()) {
+            return;
+        }
+        if (quickShopManager == null) {
+            warn("Price reduction is enabled but QuickShop-Hikari is not available; feature disabled.");
+            return;
+        }
+        try {
+            priceDatabase = new Database(prConfig, getLogger());
+            priceReductionManager = new PriceReductionManager(this, priceDatabase, prConfig);
+            priceReductionScheduler = new PriceReductionScheduler(this, priceReductionManager, prConfig);
+            priceReductionScheduler.start();
+            pm.registerEvents(new PriceActivityListener(this, priceDatabase, prConfig), this);
+            log("Price reduction feature enabled (threshold=" + prConfig.getOfflineThresholdDays()
+                  + "d, " + (prConfig.getPercent() * 100) + "%/day, run-time=" + prConfig.getRunTime() + ")");
+        } catch (Exception e) {
+            warn("Failed to initialise price reduction feature; it will be disabled. Search is unaffected.");
+            getLogger().log(java.util.logging.Level.WARNING, "Price reduction init error", e);
+            shutdownPriceReduction();
+        }
+    }
+
+    private void shutdownPriceReduction() {
+        if (priceReductionScheduler != null) {
+            priceReductionScheduler.stop();
+            priceReductionScheduler = null;
+        }
+        if (priceDatabase != null) {
+            priceDatabase.close();
+            priceDatabase = null;
+        }
+        priceReductionManager = null;
     }
 
     private void configure() {
@@ -186,13 +232,53 @@ public class MarketSearch extends JavaPlugin {
 
     private void updateConfig(File file) throws IOException {
         config.addDefault("world", "market");
+
+        // Price reduction feature defaults
+        config.addDefault("price-reduction.enabled", false);
+        config.addDefault("price-reduction.run-time", "02:00");
+        config.addDefault("price-reduction.offline-threshold-days", 60);
+        config.addDefault("price-reduction.percent", 0.02);
+        config.addDefault("price-reduction.min-drop", 0.01);
+        config.addDefault("price-reduction.min-price", 1.0);
+        config.addDefault("price-reduction.shops-per-tick", 20);
+        config.addDefault("price-reduction.return-message",
+              "&eSome of your shop prices were reduced due to your absence.");
+        config.addDefault("price-reduction.return-message-delay-ticks", 30);
+        config.addDefault("price-reduction.audit.database", true);
+        config.addDefault("price-reduction.audit.log-file", true);
+
+        // Database connection (used only when price-reduction is enabled)
+        config.addDefault("database.host", "localhost");
+        config.addDefault("database.port", 3306);
+        config.addDefault("database.name", "marketsearch");
+        config.addDefault("database.user", "marketsearch");
+        config.addDefault("database.password", "");
+        config.addDefault("database.table-prefix", "ms_");
+        config.addDefault("database.pool-size", 4);
+
         config.options().copyDefaults(true);
         config.save(file);
     }
 
     @Override
     public void onDisable() {
-        // Nothing yet
+        shutdownPriceReduction();
+    }
+
+    public ShopManager getQuickShopManager() {
+        return quickShopManager;
+    }
+
+    public String getMarketWorld() {
+        return marketWorld;
+    }
+
+    public PriceReductionManager getPriceReductionManager() {
+        return priceReductionManager;
+    }
+
+    public Database getPriceDatabase() {
+        return priceDatabase;
     }
 
     public EnchantAliasRegistry getEnchantRegistry() {
@@ -581,6 +667,10 @@ public class MarketSearch extends JavaPlugin {
                   + " Other player's shops with NO stock");
             sender.sendMessage(ChatColor.AQUA + "/ms pstock <player> lowest :" + ChatColor.WHITE
                   + " Other player's shops with lowest stock");
+        }
+        if (!(sender instanceof Player) || (hasPermission((Player) sender, "marketsearch.pricereduce.admin"))) {
+            sender.sendMessage(ChatColor.AQUA + "/ms pricereduce run|dryrun|status :" + ChatColor.WHITE
+                  + " Manage the offline price reduction routine");
         }
         if (!(sender instanceof Player) || (hasPermission((Player) sender, "marketsearch.debug"))) {
             sender.sendMessage(ChatColor.AQUA + "/ms debug :" + ChatColor.WHITE
