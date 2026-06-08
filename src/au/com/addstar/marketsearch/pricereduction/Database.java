@@ -26,9 +26,6 @@ import java.util.logging.Logger;
  */
 public class Database implements AutoCloseable {
 
-    /** Relocated MySQL driver class name (see shade config in pom.xml). */
-    private static final String DRIVER_CLASS = "au.com.addstar.marketsearch.libs.mysql.cj.jdbc.Driver";
-
     private final Logger logger;
     private final String prefix;
     private final HikariDataSource dataSource;
@@ -40,7 +37,8 @@ public class Database implements AutoCloseable {
 
         HikariConfig hc = new HikariConfig();
         hc.setPoolName("MarketSearch-Hikari");
-        hc.setDriverClassName(DRIVER_CLASS);
+        // Driver is provided by the Paper runtime (com.mysql:mysql-connector-j); HikariCP infers the
+        // driver class from the jdbc:mysql: URL, so we don't set driverClassName explicitly.
         hc.setJdbcUrl("jdbc:mysql://" + config.getDbHost() + ":" + config.getDbPort() + "/"
                 + config.getDbName() + "?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8");
         hc.setUsername(config.getDbUser());

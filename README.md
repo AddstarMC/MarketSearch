@@ -89,7 +89,9 @@ the work is spread across ticks.
 
 ### Storage & seeding (MySQL)
 
-The feature requires **MySQL** (via a bundled, relocated HikariCP pool). It maintains three tables
+The feature requires **MySQL**, connected via a HikariCP pool. Both HikariCP and the MySQL driver
+are provided by the Paper runtime (Paper bundles them), so the plugin jar stays small and does not
+ship its own copies. It maintains three tables
 (prefixed by `table-prefix`, default `ms_`):
 
 - `ms_player_activity` — each player's last login (drives offline-age) and last reset time.

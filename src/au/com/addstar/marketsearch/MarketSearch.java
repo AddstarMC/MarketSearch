@@ -173,6 +173,13 @@ public class MarketSearch extends JavaPlugin {
             warn("Price reduction is enabled but QuickShop-Hikari is not available; feature disabled.");
             return;
         }
+        // HikariCP and the MySQL driver are expected on the Paper runtime classpath (provided).
+        if (!isClassPresent("com.zaxxer.hikari.HikariDataSource")
+              || !isClassPresent("com.mysql.cj.jdbc.Driver")) {
+            warn("Price reduction is enabled but HikariCP / MySQL driver are not on the classpath; "
+                  + "feature disabled. (These are bundled by Paper; check your server build.)");
+            return;
+        }
         try {
             priceDatabase = new Database(prConfig, getLogger());
             priceReductionManager = new PriceReductionManager(this, priceDatabase, prConfig);
@@ -185,6 +192,15 @@ public class MarketSearch extends JavaPlugin {
             warn("Failed to initialise price reduction feature; it will be disabled. Search is unaffected.");
             getLogger().log(java.util.logging.Level.WARNING, "Price reduction init error", e);
             shutdownPriceReduction();
+        }
+    }
+
+    private boolean isClassPresent(String className) {
+        try {
+            Class.forName(className, false, getClass().getClassLoader());
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
         }
     }
 
