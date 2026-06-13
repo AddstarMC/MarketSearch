@@ -8,7 +8,9 @@ world: "market"
 # Players are never charged a fee for reductions applied by this feature.
 # ---------------------------------------------------------------------------
 price-reduction:
-  enabled: false              # master switch (opt-in per server)
+  # Player login tracking + the /ms pricereduce commands are active whenever the database below is
+  # reachable (independent of this flag). 'auto-reduce' only controls the automatic daily run.
+  auto-reduce: false          # true = run the reduction automatically each day at run-time
   run-time: "02:00"           # daily run time, local server time (HH:mm)
   offline-threshold-days: 60  # reductions start after a player is offline this long
   percent: 0.02               # fraction to drop each run (0.02 = 2%)
@@ -21,7 +23,10 @@ price-reduction:
     database: true            # write each adjustment to the audit table
     log-file: true            # write each adjustment to price-reduction.log
 
-# MySQL connection (only used when price-reduction.enabled is true)
+# MySQL connection. If 'host' is set and reachable, MarketSearch connects on startup, creates its
+# schema, seeds from geSuit (first run), and tracks player logins. If the connection fails it logs a
+# single line and disables player tracking; the rest of the plugin is unaffected. Leave 'host' blank
+# to skip the database entirely.
 database:
   host: localhost
   port: 3306
@@ -30,3 +35,11 @@ database:
   password: ""
   table-prefix: "ms_"
   pool-size: 4
+  # First-run seeding of player activity from geSuit. On the very first startup (when the
+  # ms_player_activity table is created), MarketSearch imports each player's last-online time from
+  # the geSuit players table so existing offline players are recognised immediately. Runs once only
+  # and never overwrites existing rows. The geSuit DB must be on this same MySQL server, and the
+  # database user above must have SELECT permission on it.
+  gesuit-seed:
+    enabled: true
+    source-table: "gesuit.players"   # schema-qualified geSuit players table

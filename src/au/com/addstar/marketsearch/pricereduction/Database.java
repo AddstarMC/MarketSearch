@@ -10,7 +10,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -28,12 +31,18 @@ public class Database implements AutoCloseable {
 
     private final Logger logger;
     private final String prefix;
+    private final String dbName;
+    private final boolean gesuitSeedEnabled;
+    private final String gesuitSourceTable;
     private final HikariDataSource dataSource;
     private final ExecutorService executor;
 
     public Database(PriceReductionConfig config, Logger logger) {
         this.logger = logger;
         this.prefix = config.getTablePrefix();
+        this.dbName = config.getDbName();
+        this.gesuitSeedEnabled = config.isGesuitSeedEnabled();
+        this.gesuitSourceTable = config.getGesuitSourceTable();
 
         HikariConfig hc = new HikariConfig();
         hc.setPoolName("MarketSearch-Hikari");
@@ -100,11 +109,62 @@ public class Database implements AutoCloseable {
                 + "INDEX idx_owner (owner_uuid)"
                 + ")";
         try (Connection c = dataSource.getConnection(); Statement st = c.createStatement()) {
+            boolean activityExisted = tableExists(c, prefix + "player_activity");
             st.executeUpdate(activity);
             st.executeUpdate(reduction);
             st.executeUpdate(audit);
+            logger.info("Price reduction: tables ready (" + prefix + "player_activity, "
+                    + prefix + "shop_reduction, " + prefix + "price_audit).");
+
+            // Seed once, only when the activity table is freshly created.
+            if (activityExisted) {
+                logger.info("Price reduction: " + prefix + "player_activity already existed; "
+                        + "skipping geSuit seed.");
+            } else if (!gesuitSeedEnabled) {
+                logger.info("Price reduction: " + prefix + "player_activity created; geSuit seed is "
+                        + "disabled in config, so it starts empty (players fill in as they log in).");
+            } else {
+                logger.info("Price reduction: " + prefix + "player_activity newly created; seeding "
+                        + "from geSuit (" + gesuitSourceTable + ")...");
+                seedFromGesuit(c);
+            }
         } catch (SQLException e) {
             throw new IllegalStateException("Failed to create MarketSearch price-reduction tables", e);
+        }
+    }
+
+    private boolean tableExists(Connection c, String tableName) throws SQLException {
+        try (ResultSet rs = c.getMetaData().getTables(dbName, null, tableName, new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    /**
+     * One-off seed of {@code player_activity} from the geSuit players table (same MySQL server,
+     * different database). geSuit stores unhyphenated 32-char UUIDs and a DATETIME lastonline; this
+     * converts both to our formats in SQL. Uses INSERT IGNORE so existing (MS-tracked) rows are
+     * never overwritten. Failures are logged and swallowed so the feature still works without a seed.
+     */
+    private void seedFromGesuit(Connection c) {
+        // Validate the configured source table to avoid SQL injection via config (it is interpolated
+        // directly, since a table identifier cannot be a bound parameter).
+        if (!gesuitSourceTable.matches("[A-Za-z0-9_.]+")) {
+            logger.warning("geSuit seed skipped: invalid source-table '" + gesuitSourceTable + "'");
+            return;
+        }
+        String sql = "INSERT IGNORE INTO " + t("player_activity") + " (uuid, last_login) "
+                + "SELECT LOWER(CONCAT("
+                + "SUBSTRING(uuid,1,8),'-',SUBSTRING(uuid,9,4),'-',SUBSTRING(uuid,13,4),'-',"
+                + "SUBSTRING(uuid,17,4),'-',SUBSTRING(uuid,21,12))), "
+                + "UNIX_TIMESTAMP(lastonline) * 1000 "
+                + "FROM " + gesuitSourceTable + " "
+                + "WHERE uuid IS NOT NULL AND CHAR_LENGTH(uuid) = 32 AND lastonline IS NOT NULL";
+        try (Statement st = c.createStatement()) {
+            int rows = st.executeUpdate(sql);
+            logger.info("Price reduction: seeded " + rows + " player activity rows from " + gesuitSourceTable);
+        } catch (SQLException e) {
+            logger.log(Level.WARNING, "geSuit seed skipped: could not read " + gesuitSourceTable
+                    + " (check the table exists and the DB user has SELECT on it)", e);
         }
     }
 
@@ -132,24 +192,50 @@ public class Database implements AutoCloseable {
         });
     }
 
-    /** @return owners whose last_login is older than (now - thresholdMillis). */
-    public CompletableFuture<List<UUID>> getEligibleOwners(long thresholdMillis, long now) {
+    /** Max UUIDs per IN(...) batch when checking eligibility, to keep statements small. */
+    private static final int ELIGIBILITY_BATCH = 500;
+
+    /**
+     * Given a set of candidate owners (derived from the shops that actually exist in the market
+     * world), returns the subset whose last_login is older than (now - thresholdMillis), i.e. those
+     * eligible for reduction. The candidates are queried in batches of {@link #ELIGIBILITY_BATCH}
+     * with an IN(...) clause so the statement never grows unbounded even with thousands of owners.
+     * Runs on the DB executor (off the main thread).
+     *
+     * <p>Owners with no activity row are treated as ineligible (unknown -> never reduced).
+     */
+    public CompletableFuture<Set<UUID>> getEligibleAmong(Collection<UUID> candidates,
+                                                         long thresholdMillis, long now) {
         return async(c -> {
-            List<UUID> owners = new ArrayList<>();
-            String sql = "SELECT uuid FROM " + t("player_activity") + " WHERE last_login < ?";
-            try (PreparedStatement ps = c.prepareStatement(sql)) {
-                ps.setLong(1, now - thresholdMillis);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) {
-                        try {
-                            owners.add(UUID.fromString(rs.getString("uuid")));
-                        } catch (IllegalArgumentException ignored) {
-                            // skip malformed uuid rows
+            Set<UUID> eligible = new HashSet<>();
+            if (candidates.isEmpty()) {
+                return eligible;
+            }
+            long cutoff = now - thresholdMillis;
+            List<UUID> all = new ArrayList<>(candidates);
+            for (int start = 0; start < all.size(); start += ELIGIBILITY_BATCH) {
+                List<UUID> batch = all.subList(start, Math.min(start + ELIGIBILITY_BATCH, all.size()));
+                String placeholders = String.join(",", java.util.Collections.nCopies(batch.size(), "?"));
+                String sql = "SELECT uuid FROM " + t("player_activity")
+                        + " WHERE last_login < ? AND uuid IN (" + placeholders + ")";
+                try (PreparedStatement ps = c.prepareStatement(sql)) {
+                    ps.setLong(1, cutoff);
+                    int i = 2;
+                    for (UUID u : batch) {
+                        ps.setString(i++, u.toString());
+                    }
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            try {
+                                eligible.add(UUID.fromString(rs.getString("uuid")));
+                            } catch (IllegalArgumentException ignored) {
+                                // skip malformed uuid rows
+                            }
                         }
                     }
                 }
             }
-            return owners;
+            return eligible;
         });
     }
 

@@ -166,32 +166,56 @@ public class MarketSearch extends JavaPlugin {
 
     private void setupPriceReduction(PluginManager pm) {
         PriceReductionConfig prConfig = new PriceReductionConfig(config);
-        if (!prConfig.isEnabled()) {
-            return;
-        }
-        if (quickShopManager == null) {
-            warn("Price reduction is enabled but QuickShop-Hikari is not available; feature disabled.");
+
+        // Player tracking is the base layer: if a database is configured we always try to connect,
+        // create the schema, seed, and track logins. The price-reduction commands are available
+        // whenever the DB is up; the 'auto-reduce' flag only controls the daily scheduled run.
+        if (!prConfig.isDbConfigured()) {
+            log("Player tracking: disabled (no 'database.host' set in config.yml).");
             return;
         }
         // HikariCP and the MySQL driver are expected on the Paper runtime classpath (provided).
         if (!isClassPresent("com.zaxxer.hikari.HikariDataSource")
               || !isClassPresent("com.mysql.cj.jdbc.Driver")) {
-            warn("Price reduction is enabled but HikariCP / MySQL driver are not on the classpath; "
-                  + "feature disabled. (These are bundled by Paper; check your server build.)");
+            warn("Player tracking: disabled - HikariCP / MySQL driver are not on the classpath. "
+                  + "(These are bundled by Paper; check your server build.)");
             return;
         }
+
         try {
+            log("Player tracking: connecting to MySQL at " + prConfig.getDbHost() + ":"
+                  + prConfig.getDbPort() + "/" + prConfig.getDbName()
+                  + " (table prefix '" + prConfig.getTablePrefix() + "')...");
             priceDatabase = new Database(prConfig, getLogger());
-            priceReductionManager = new PriceReductionManager(this, priceDatabase, prConfig);
-            priceReductionScheduler = new PriceReductionScheduler(this, priceReductionManager, prConfig);
-            priceReductionScheduler.start();
-            pm.registerEvents(new PriceActivityListener(this, priceDatabase, prConfig), this);
-            log("Price reduction feature enabled (threshold=" + prConfig.getOfflineThresholdDays()
-                  + "d, " + (prConfig.getPercent() * 100) + "%/day, run-time=" + prConfig.getRunTime() + ")");
         } catch (Exception e) {
-            warn("Failed to initialise price reduction feature; it will be disabled. Search is unaffected.");
-            getLogger().log(java.util.logging.Level.WARNING, "Price reduction init error", e);
+            // Connection / schema failure: single-line message, everything DB-related stays off.
+            warn("Player tracking: disabled - could not connect to the database (" + e.getMessage()
+                  + "). MarketSearch search is unaffected.");
+            getLogger().log(java.util.logging.Level.FINE, "Player tracking DB init error", e);
             shutdownPriceReduction();
+            return;
+        }
+
+        // DB is up: enable login tracking + the price-reduction manager (manual commands).
+        priceReductionManager = new PriceReductionManager(this, priceDatabase, prConfig);
+        pm.registerEvents(new PriceActivityListener(this, priceDatabase, prConfig), this);
+        log("Player tracking: active. Price reduction available via /ms pricereduce (threshold="
+              + prConfig.getOfflineThresholdDays() + "d, " + (prConfig.getPercent() * 100)
+              + "%/day, floor=$" + prConfig.getMinPrice() + ", market world='" + marketWorld + "').");
+
+        // Daily automated run only when QuickShop is present AND auto-reduce is on.
+        if (prConfig.isAutoReduce()) {
+            if (quickShopManager == null) {
+                warn("Price reduction: auto-reduce is on but QuickShop-Hikari is not available; "
+                      + "the scheduled run is disabled (manual commands still work).");
+            } else {
+                priceReductionScheduler = new PriceReductionScheduler(this, priceReductionManager, prConfig);
+                priceReductionScheduler.start();
+                log("Price reduction: automated daily run ENABLED at " + prConfig.getRunTime() + ".");
+            }
+        } else {
+            log("Price reduction: automated daily run is OFF (set 'price-reduction.auto-reduce: true' "
+                  + "to schedule it). Manual /ms pricereduce run|dryrun still work.");
         }
     }
 
@@ -250,7 +274,7 @@ public class MarketSearch extends JavaPlugin {
         config.addDefault("world", "market");
 
         // Price reduction feature defaults
-        config.addDefault("price-reduction.enabled", false);
+        config.addDefault("price-reduction.auto-reduce", false);
         config.addDefault("price-reduction.run-time", "02:00");
         config.addDefault("price-reduction.offline-threshold-days", 60);
         config.addDefault("price-reduction.percent", 0.02);
@@ -271,6 +295,8 @@ public class MarketSearch extends JavaPlugin {
         config.addDefault("database.password", "");
         config.addDefault("database.table-prefix", "ms_");
         config.addDefault("database.pool-size", 4);
+        config.addDefault("database.gesuit-seed.enabled", true);
+        config.addDefault("database.gesuit-seed.source-table", "gesuit.players");
 
         config.options().copyDefaults(true);
         config.save(file);

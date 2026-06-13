@@ -7,7 +7,7 @@ import org.bukkit.configuration.file.FileConfiguration;
  * Typed view over the {@code price-reduction} and {@code database} sections of config.yml.
  */
 public class PriceReductionConfig {
-    private final boolean enabled;
+    private final boolean autoReduce;        // run the daily reduction automatically
     private final String runTime;            // HH:mm
     private final int offlineThresholdDays;
     private final double percent;            // e.g. 0.02
@@ -27,10 +27,12 @@ public class PriceReductionConfig {
     private final String dbPassword;
     private final String tablePrefix;
     private final int poolSize;
+    private final boolean gesuitSeedEnabled;
+    private final String gesuitSourceTable;
 
     public PriceReductionConfig(FileConfiguration config) {
         ConfigurationSection pr = section(config, "price-reduction");
-        this.enabled = pr.getBoolean("enabled", false);
+        this.autoReduce = pr.getBoolean("auto-reduce", false);
         this.runTime = pr.getString("run-time", "02:00");
         this.offlineThresholdDays = pr.getInt("offline-threshold-days", 60);
         this.percent = pr.getDouble("percent", 0.02);
@@ -53,6 +55,11 @@ public class PriceReductionConfig {
         this.dbPassword = db.getString("password", "");
         this.tablePrefix = db.getString("table-prefix", "ms_");
         this.poolSize = Math.max(1, db.getInt("pool-size", 4));
+
+        ConfigurationSection seed = db.getConfigurationSection("gesuit-seed");
+        this.gesuitSeedEnabled = seed == null || seed.getBoolean("enabled", true);
+        this.gesuitSourceTable = (seed != null)
+                ? seed.getString("source-table", "gesuit.players") : "gesuit.players";
     }
 
     private static ConfigurationSection section(FileConfiguration config, String path) {
@@ -60,8 +67,14 @@ public class PriceReductionConfig {
         return (s != null) ? s : config.createSection(path);
     }
 
-    public boolean isEnabled() {
-        return enabled;
+    /** Whether the daily reduction should run automatically on the schedule. */
+    public boolean isAutoReduce() {
+        return autoReduce;
+    }
+
+    /** Whether a database host is configured (and so a connection should be attempted). */
+    public boolean isDbConfigured() {
+        return dbHost != null && !dbHost.isBlank();
     }
 
     public String getRunTime() {
@@ -134,5 +147,13 @@ public class PriceReductionConfig {
 
     public int getPoolSize() {
         return poolSize;
+    }
+
+    public boolean isGesuitSeedEnabled() {
+        return gesuitSeedEnabled;
+    }
+
+    public String getGesuitSourceTable() {
+        return gesuitSourceTable;
     }
 }

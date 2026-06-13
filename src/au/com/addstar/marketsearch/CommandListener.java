@@ -326,7 +326,8 @@ class CommandListener implements CommandExecutor {
         PriceReductionManager manager = plugin.getPriceReductionManager();
         if (manager == null) {
             sender.sendMessage(ChatColor.RED
-                  + "Price reduction is not enabled (check config price-reduction.enabled and the database).");
+                  + "Price reduction is unavailable: the database is not connected (check 'database' "
+                  + "in config.yml and the console log for the connection error).");
             return;
         }
         String sub = (args.length > 1) ? args[1].toUpperCase() : "";
@@ -346,7 +347,7 @@ class CommandListener implements CommandExecutor {
                 break;
             case "STATUS":
                 if (args.length < 3) {
-                    sender.sendMessage(ChatColor.RED + "Usage: /ms pricereduce status <player>");
+                    sender.sendMessage(ChatColor.RED + "Usage: /ms pricereduce status <player|uuid>");
                     return;
                 }
                 resolveOwner(sender, args[2], uuid -> showStatus(sender, args[2], uuid));
@@ -355,24 +356,53 @@ class CommandListener implements CommandExecutor {
                 sender.sendMessage(ChatColor.GREEN + "MarketSearch price reduction:");
                 sender.sendMessage(ChatColor.AQUA + "/ms pricereduce run" + ChatColor.WHITE
                       + " - run the reduction now");
-                sender.sendMessage(ChatColor.AQUA + "/ms pricereduce dryrun [player]" + ChatColor.WHITE
+                sender.sendMessage(ChatColor.AQUA + "/ms pricereduce dryrun [player|uuid]" + ChatColor.WHITE
                       + " - preview without changing prices");
-                sender.sendMessage(ChatColor.AQUA + "/ms pricereduce status <player>" + ChatColor.WHITE
+                sender.sendMessage(ChatColor.AQUA + "/ms pricereduce status <player|uuid>" + ChatColor.WHITE
                       + " - show a player's offline/reduction status");
+                sender.sendMessage(ChatColor.GRAY
+                      + "   (pass a UUID to avoid a name lookup - handy for renamed/old players)");
                 break;
         }
     }
 
-    /** Resolves a player name to a UUID off the main thread, then runs the consumer on success. */
-    private void resolveOwner(CommandSender sender, String name, java.util.function.Consumer<java.util.UUID> consumer) {
+    /**
+     * Resolves a player argument to a UUID, then runs the consumer. Accepts a UUID directly (either
+     * hyphenated or unhyphenated 32-char form) to avoid a live Mojang name lookup - useful for old
+     * players who have since changed their name. Otherwise resolves by name off the main thread.
+     */
+    private void resolveOwner(CommandSender sender, String input, java.util.function.Consumer<java.util.UUID> consumer) {
+        java.util.UUID direct = parseUuid(input);
+        if (direct != null) {
+            consumer.accept(direct);
+            return;
+        }
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            org.bukkit.OfflinePlayer p = Bukkit.getOfflinePlayer(name);
+            org.bukkit.OfflinePlayer p = Bukkit.getOfflinePlayer(input);
             if (!p.hasPlayedBefore() && !p.isOnline()) {
-                sender.sendMessage(ChatColor.RED + "Unknown player: " + name);
+                sender.sendMessage(ChatColor.RED + "Unknown player: " + input
+                      + " (tip: you can pass a UUID directly to skip the name lookup).");
                 return;
             }
             consumer.accept(p.getUniqueId());
         });
+    }
+
+    /** Parses a hyphenated or unhyphenated (32 hex char) UUID; returns null if not a UUID. */
+    private java.util.UUID parseUuid(String s) {
+        try {
+            if (s.length() == 32 && s.matches("[0-9a-fA-F]{32}")) {
+                String hyphenated = s.replaceFirst(
+                      "(.{8})(.{4})(.{4})(.{4})(.{12})", "$1-$2-$3-$4-$5");
+                return java.util.UUID.fromString(hyphenated);
+            }
+            if (s.length() == 36) {
+                return java.util.UUID.fromString(s);
+            }
+        } catch (IllegalArgumentException ignored) {
+            // not a UUID
+        }
+        return null;
     }
 
     private void showStatus(CommandSender sender, String name, java.util.UUID uuid) {

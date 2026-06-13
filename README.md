@@ -69,7 +69,21 @@ long-offline players**, while leaving active players untouched.
 
 ### How it works
 
-- A daily routine runs at a configurable time (default **02:00**, server local time).
+This is two layers:
+
+- **Player tracking** (always on when the database is reachable): MarketSearch connects on startup,
+  creates its schema, seeds from geSuit on first run, records each player's last login, and resets a
+  returning player's countdown. The `/ms pricereduce` commands (including manual `run` and `dryrun`)
+  are available whenever the DB is up. If the connection fails, tracking is disabled with a single
+  log line and the rest of the plugin is unaffected.
+- **Automated reduction** (the `auto-reduce` flag): only controls whether the reduction runs
+  **automatically** on the daily schedule. With it off, nothing runs on its own, but you can still
+  trigger reductions manually.
+
+The reduction itself:
+
+- A daily routine runs at a configurable time (default **02:00**, server local time) **when
+  `auto-reduce` is enabled**.
 - A player's shops become eligible once they have been offline for **`offline-threshold-days`**
   (default **60**).
 - Each run drops each eligible shop's price by **`percent`** (default **2%**), with a minimum drop
@@ -99,15 +113,21 @@ ship its own copies. It maintains three tables
   reductions since the owner's last login, and the date last processed (the one-drop-per-day guard).
 - `ms_price_audit` — append-only audit of every adjustment (and dry-run previews).
 
-> **Seeding:** so existing offline players are recognised immediately, seed `ms_player_activity`
-> from your proxy-wide player database (e.g. geSuit) once before the first live run. Players with no
-> activity record are skipped (never reduced) until MS sees them log in.
+> **Seeding (automatic):** so existing offline players are recognised immediately, MarketSearch
+> auto-seeds `ms_player_activity` from the geSuit `players` table the **first time** its tables are
+> created. This runs once, never overwrites existing rows, and converts geSuit's UUID/timestamp
+> formats automatically. Requirements: the geSuit database is on the **same MySQL server** as
+> MarketSearch's, and the configured DB user has **`SELECT`** on it. Configure via
+> `database.gesuit-seed` (`enabled`, `source-table`, default `gesuit.players`). If the source table
+> can't be read, seeding is skipped with a warning and the feature still works — rows just fill in as
+> players log in. Players with no activity record are skipped (never reduced) until MS sees them.
 
 ### Configuration
 
 ```yaml
 price-reduction:
-  enabled: false              # master switch (opt-in per server)
+  auto-reduce: false          # true = run the reduction automatically each day (tracking + manual
+                              #        commands work regardless, whenever the database is reachable)
   run-time: "02:00"           # daily run time, local server time (HH:mm)
   offline-threshold-days: 60  # reductions start after a player is offline this long
   percent: 0.02               # fraction to drop each run (0.02 = 2%)
@@ -120,7 +140,7 @@ price-reduction:
     database: true            # write each adjustment to the audit table
     log-file: true            # write each adjustment to price-reduction.log
 
-database:                     # only used when price-reduction.enabled is true
+database:                     # connected on startup if 'host' is set; leave blank to skip the DB
   host: localhost
   port: 3306
   name: marketsearch
@@ -130,8 +150,8 @@ database:                     # only used when price-reduction.enabled is true
   pool-size: 4
 ```
 
-If the database is unreachable at startup, the feature disables itself gracefully — search and the
-rest of the plugin are unaffected.
+If the database is unreachable at startup, player tracking and price reduction disable themselves
+gracefully (single log line) — search and the rest of the plugin are unaffected.
 
 ### Commands
 
