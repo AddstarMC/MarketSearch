@@ -365,7 +365,7 @@ public class Database implements AutoCloseable {
                 ps.setDate(3, java.sql.Date.valueOf(u.processedDate()));
                 ps.setDouble(4, u.oldPrice());
                 ps.setDouble(5, u.newPrice());
-                ps.setDouble(6, u.oldPrice() - u.newPrice());
+                ps.setDouble(6, PriceMath.round2dp(u.oldPrice() - u.newPrice()));
                 ps.setString(7, u.world());
                 ps.setInt(8, u.x());
                 ps.setInt(9, u.y());

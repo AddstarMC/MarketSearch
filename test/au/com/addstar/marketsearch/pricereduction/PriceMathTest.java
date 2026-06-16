@@ -29,10 +29,18 @@ class PriceMathTest {
 
     @Test
     void neverDropsBelowFloor() {
-        // 2% of 1.10 = 0.022 -> 1.078, but floor is 1.0 so it clamps to ... 1.078 (above floor)
-        assertEquals(1.078, PriceMath.computeNewPrice(1.10, PCT, MIN_DROP, FLOOR), EPS);
+        // 2% of 1.10 = 0.022 -> 1.078, above floor 1.0; rounded to 2dp -> 1.08
+        assertEquals(1.08, PriceMath.computeNewPrice(1.10, PCT, MIN_DROP, FLOOR), EPS);
         // A drop that would cross the floor clamps exactly to the floor
         assertEquals(FLOOR, PriceMath.computeNewPrice(1.005, PCT, MIN_DROP, FLOOR), EPS);
+    }
+
+    @Test
+    void resultIsRoundedToTwoDecimalPlaces() {
+        // The reported case: 4.99 - 2% = 4.8902, which must be stored as 4.89.
+        assertEquals(4.89, PriceMath.computeNewPrice(4.99, PCT, MIN_DROP, FLOOR), EPS);
+        assertEquals(1.23, PriceMath.round2dp(1.2349));
+        assertEquals(1.24, PriceMath.round2dp(1.2350));
     }
 
     @Test

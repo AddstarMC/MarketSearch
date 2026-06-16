@@ -33,7 +33,14 @@ public final class PriceMath {
         if (newPrice < minPrice) {
             newPrice = minPrice;
         }
-        return newPrice;
+        // Shop prices are always whole-cent values; round so neither QuickShop nor the audit log
+        // ever store a price like 4.8902. Rounded after the floor clamp so the floor is respected.
+        return round2dp(newPrice);
+    }
+
+    /** Rounds a monetary amount to two decimal places (half-up via {@link Math#round}). */
+    public static double round2dp(double value) {
+        return Math.round(value * 100.0) / 100.0;
     }
 
     /**
