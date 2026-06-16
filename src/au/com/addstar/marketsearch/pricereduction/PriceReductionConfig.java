@@ -14,6 +14,7 @@ public class PriceReductionConfig {
     private final double minDrop;            // absolute minimum drop per run
     private final double minPrice;           // global price floor
     private final int shopsPerTick;
+    private final int chunkUnloadDelayTicks;
     private final String returnMessage;
     private final int returnMessageDelayTicks;
     private final boolean auditDatabase;
@@ -39,6 +40,7 @@ public class PriceReductionConfig {
         this.minDrop = pr.getDouble("min-drop", 0.01);
         this.minPrice = pr.getDouble("min-price", 1.0);
         this.shopsPerTick = Math.max(1, pr.getInt("shops-per-tick", 20));
+        this.chunkUnloadDelayTicks = Math.max(0, pr.getInt("chunk-unload-delay-ticks", 40));
         this.returnMessage = pr.getString("return-message",
                 "&eSome of your shop prices were reduced due to your absence.");
         this.returnMessageDelayTicks = pr.getInt("return-message-delay-ticks", 30);
@@ -103,6 +105,15 @@ public class PriceReductionConfig {
 
     public int getShopsPerTick() {
         return shopsPerTick;
+    }
+
+    /**
+     * Delay, in ticks, between finishing a chunk's shops and unloading a chunk this run loaded.
+     * Gives QuickShop's chunk-unload handling and the chunk save-to-disk room to settle rather than
+     * forcing it inline with the price writes.
+     */
+    public int getChunkUnloadDelayTicks() {
+        return chunkUnloadDelayTicks;
     }
 
     public String getReturnMessage() {

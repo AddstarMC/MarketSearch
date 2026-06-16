@@ -6,6 +6,7 @@ import com.ghostchu.quickshop.api.shop.ShopManager;
 import com.ghostchu.quickshop.api.shop.ShopType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -20,7 +21,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -173,36 +176,127 @@ public class PriceReductionManager {
                                  boolean dryRun, CommandSender notifier, String marketWorld,
                                  long now, Stats stats) {
         LocalDate today = LocalDate.now();
+        stats.queued = candidateShops.size();
 
-        notify(notifier, (dryRun ? "[dry-run] " : "") + "Processing up to " + candidateShops.size()
-                + " market shops (" + eligibleOwners.size() + " eligible owner(s)) at "
+        // Group the in-hand shops by chunk so that all shops in a chunk are processed consecutively.
+        // The market world is normally empty, so most shops live in unloaded chunks; processing a
+        // chunk's shops together lets us load the chunk once, then unload it once we're done.
+        Deque<ChunkBatch> batches = groupByChunk(candidateShops);
+
+        notify(notifier, (dryRun ? "[dry-run] " : "") + "Processing up to " + stats.queued
+                + " market shops in " + batches.size() + " chunk(s) ("
+                + eligibleOwners.size() + " eligible owner(s)) at "
                 + config.getShopsPerTick() + "/tick...");
 
         new BukkitRunnable() {
+            // The chunk currently being worked through, and whether this run had to load it.
+            private ChunkBatch current;
+            private boolean currentLoadedByUs;
+
             @Override
             public void run() {
                 int budget = config.getShopsPerTick();
-                while (budget-- > 0 && !candidateShops.isEmpty()) {
-                    Shop shop = candidateShops.poll();
-                    // Skip shops whose owner isn't eligible (cheap owner-UUID check, no DB).
-                    try {
-                        if (!eligibleOwners.contains(shop.getOwner().getUniqueId())) {
-                            stats.skippedNotEligible++;
+                while (budget > 0) {
+                    if (current == null) {
+                        current = batches.poll();
+                        if (current == null) {
+                            break; // nothing left
+                        }
+                        currentLoadedByUs = ensureChunkLoaded(current, stats);
+                    }
+                    // Drain as many shops from the current chunk as the remaining budget allows.
+                    while (budget > 0 && !current.shops.isEmpty()) {
+                        Shop shop = current.shops.poll();
+                        budget--;
+                        try {
+                            if (!eligibleOwners.contains(shop.getOwner().getUniqueId())) {
+                                stats.skippedNotEligible++;
+                                continue;
+                            }
+                        } catch (Throwable t) {
+                            stats.errors++;
+                            logShopApiError(t, stats);
                             continue;
                         }
-                    } catch (Throwable t) {
-                        stats.errors++;
-                        logShopApiError(t, stats);
-                        continue;
+                        processShop(shop, states, dryRun, marketWorld, today, now, stats);
                     }
-                    processShop(shop, states, dryRun, marketWorld, today, now, stats);
+                    if (current.shops.isEmpty()) {
+                        // Done with this chunk: release it (delayed) if we were the ones who loaded it.
+                        if (currentLoadedByUs) {
+                            scheduleChunkUnload(current);
+                        }
+                        current = null;
+                    }
                 }
-                if (candidateShops.isEmpty()) {
+                if (current == null && batches.isEmpty()) {
                     cancel();
                     finish(dryRun, notifier, stats);
                 }
             }
         }.runTaskTimer(plugin, 1L, 1L);
+    }
+
+    /**
+     * Groups the queued shops into per-chunk batches, preserving overall iteration order. Shops with
+     * an unreadable location are dropped here (counted as errors) rather than crashing the pacer.
+     */
+    private Deque<ChunkBatch> groupByChunk(Deque<Shop> candidateShops) {
+        Map<String, ChunkBatch> byChunk = new LinkedHashMap<>();
+        Shop shop;
+        while ((shop = candidateShops.poll()) != null) {
+            try {
+                Location loc = shop.getLocation();
+                World world = loc.getWorld();
+                if (world == null) {
+                    continue;
+                }
+                int cx = loc.getBlockX() >> 4;
+                int cz = loc.getBlockZ() >> 4;
+                String key = world.getName() + ";" + cx + ";" + cz;
+                byChunk.computeIfAbsent(key, k -> new ChunkBatch(world, cx, cz)).shops.add(shop);
+            } catch (Throwable t) {
+                // Can't place this shop in a chunk; skip it silently here (it would have errored in
+                // processShop anyway). Not counted to avoid double-counting against later phases.
+            }
+        }
+        return new ArrayDeque<>(byChunk.values());
+    }
+
+    /**
+     * Ensures the chunk backing this batch is loaded so the shops' chests are accessible and
+     * QuickShop has loaded the shop objects. Returns true if this call loaded the chunk (i.e. it was
+     * not already loaded and so should be unloaded by us once we're finished with it).
+     */
+    private boolean ensureChunkLoaded(ChunkBatch batch, Stats stats) {
+        try {
+            if (batch.world.isChunkLoaded(batch.chunkX, batch.chunkZ)) {
+                return false;
+            }
+            batch.world.getChunkAt(batch.chunkX, batch.chunkZ); // loads synchronously on the main thread
+            return true;
+        } catch (Throwable t) {
+            stats.errors++; // best-effort; processShop will record per-shop failures too
+            logShopApiError(t, stats);
+            return false;
+        }
+    }
+
+    /**
+     * Unloads a chunk that this run loaded, after a short delay. The delay lets QuickShop's own
+     * chunk-unload handling and the chunk's save-to-disk settle rather than forcing it inline with
+     * the price writes. Only chunks with no players nearby will actually unload.
+     */
+    private void scheduleChunkUnload(ChunkBatch batch) {
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            try {
+                if (batch.world.isChunkLoaded(batch.chunkX, batch.chunkZ)) {
+                    batch.world.unloadChunk(batch.chunkX, batch.chunkZ, true);
+                }
+            } catch (Throwable t) {
+                plugin.getLogger().log(Level.FINE, "Price reduction: failed to unload chunk "
+                        + batch.world.getName() + " " + batch.chunkX + "," + batch.chunkZ, t);
+            }
+        }, config.getChunkUnloadDelayTicks());
     }
 
     private void processShop(Shop shop, java.util.Map<String, Database.ShopReductionState> states,
@@ -217,9 +311,18 @@ public class PriceReductionManager {
                 stats.skippedType++;
                 return;
             }
+            // The pacer has loaded this shop's chunk; QuickShop loads its shops on chunk-load, but
+            // ask it to load explicitly in case the chunk-load handler hasn't run yet. Only if the
+            // shop is still not loaded after that do we treat it as genuinely unavailable.
             if (!shop.isLoaded()) {
-                stats.skippedUnloaded++;
-                return;
+                ShopManager shopManager = plugin.getQuickShopManager();
+                if (shopManager != null) {
+                    shopManager.loadShop(shop);
+                }
+                if (!shop.isLoaded()) {
+                    stats.skippedUnloaded++;
+                    return;
+                }
             }
             if (shop.getRemainingStock() == 0) {
                 stats.skippedNoStock++;
@@ -336,6 +439,7 @@ public class PriceReductionManager {
     }
 
     private static final class Stats {
+        int queued;
         int scanned;
         int reduced;
         int skippedNotEligible;
@@ -345,5 +449,19 @@ public class PriceReductionManager {
         int skippedAlready;
         int skippedAtFloor;
         int errors;
+    }
+
+    /** A set of shops sharing a single world chunk, processed (and loaded/unloaded) together. */
+    private static final class ChunkBatch {
+        final World world;
+        final int chunkX;
+        final int chunkZ;
+        final Deque<Shop> shops = new ArrayDeque<>();
+
+        ChunkBatch(World world, int chunkX, int chunkZ) {
+            this.world = world;
+            this.chunkX = chunkX;
+            this.chunkZ = chunkZ;
+        }
     }
 }

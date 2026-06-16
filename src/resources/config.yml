@@ -17,6 +17,10 @@ price-reduction:
   min-drop: 0.01              # minimum absolute drop applied per run
   min-price: 1.0              # global price floor; never reduce below this
   shops-per-tick: 20          # main-thread budget; shops processed per tick
+  # The market world is normally empty, so most shop chunks are unloaded. The run loads each shop's
+  # chunk to bump its price, then unloads any chunk it had to load once its shops are done. This is
+  # the delay (ticks) before that unload, giving the chunk save-to-disk room to settle (20 ticks=1s).
+  chunk-unload-delay-ticks: 40
   return-message: "&eSome of your shop prices were reduced due to your absence."
   return-message-delay-ticks: 30
   audit:
