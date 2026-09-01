@@ -22,7 +22,6 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
-import com.ghostchu.quickshop.api.shop.ShopType;
 import java.util.Arrays;
 
 import java.util.ArrayList;
@@ -93,9 +92,9 @@ class CommandListener implements CommandExecutor {
                     smgr.startSearch(player, ChatColor.YELLOW + "Market Search: " + ChatColor.GOLD + finalSearch);
                     List<ShopResult> resultsUnfiltered;
                     if (action.equals("SELL")) {
-                        resultsUnfiltered = plugin.searchMarket(player, searchFor, ShopType.BUYING);
+                        resultsUnfiltered = plugin.searchMarket(player, searchFor, SearchType.BUYING);
                     } else {
-                        resultsUnfiltered = plugin.searchMarket(player, searchFor, ShopType.SELLING);
+                        resultsUnfiltered = plugin.searchMarket(player, searchFor, SearchType.SELLING);
                     }
 
                     handleSearchResults(action, finalSearch, resultsUnfiltered, sender, searchFor, finalPage);

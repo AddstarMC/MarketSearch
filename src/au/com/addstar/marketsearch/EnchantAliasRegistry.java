@@ -20,36 +20,36 @@ public class EnchantAliasRegistry {
         aliasToEnchant.clear();
 
         // register each enchant with one or more aliases:
-        register(Enchantment.ARROW_DAMAGE,              "power", "arrowdmg", "arrowdamage");
-        register(Enchantment.ARROW_FIRE,                "flame", "firearrow");
-        register(Enchantment.ARROW_INFINITE,            "inf", "infinity", "infini");
-        register(Enchantment.ARROW_KNOCKBACK,           "punch", "arrowknock");
+        register(Enchantment.POWER,              "power", "arrowdmg", "arrowdamage");
+        register(Enchantment.FLAME,                "flame", "firearrow");
+        register(Enchantment.INFINITY,            "inf", "infinity", "infini");
+        register(Enchantment.PUNCH,           "punch", "arrowknock");
         register(Enchantment.BINDING_CURSE,             "bind", "binding");
         register(Enchantment.CHANNELING,                "chan", "channel", "channeling");
-        register(Enchantment.DAMAGE_ALL,                "dmg", "sharp", "sharpness");
-        register(Enchantment.DAMAGE_ARTHROPODS,         "bane", "arthro", "arthropods");
-        register(Enchantment.DAMAGE_UNDEAD,             "smite", "undead");
+        register(Enchantment.SHARPNESS,                "dmg", "sharp", "sharpness");
+        register(Enchantment.BANE_OF_ARTHROPODS,         "bane", "arthro", "arthropods");
+        register(Enchantment.SMITE,             "smite", "undead");
         register(Enchantment.DEPTH_STRIDER,             "strider", "depth");
-        register(Enchantment.DIG_SPEED,                 "eff", "efficiency");
-        register(Enchantment.DURABILITY,                "dura", "durability", "unbreaking", "unbreak");
+        register(Enchantment.EFFICIENCY,                 "eff", "efficiency");
+        register(Enchantment.UNBREAKING,                "dura", "durability", "unbreaking", "unbreak");
         register(Enchantment.FIRE_ASPECT,               "fire", "aspect", "fireaspect");
         register(Enchantment.FROST_WALKER,              "frost", "frostwalker", "frostwalk");
         register(Enchantment.IMPALING,                  "impale", "impaling");
         register(Enchantment.KNOCKBACK,                 "knock", "knockback");
-        register(Enchantment.LOOT_BONUS_BLOCKS,         "fort", "fortune");
-        register(Enchantment.LOOT_BONUS_MOBS,           "loot", "looting");
+        register(Enchantment.FORTUNE,         "fort", "fortune");
+        register(Enchantment.LOOTING,           "loot", "looting");
         register(Enchantment.LOYALTY,                   "loyal", "loyalty");
-        register(Enchantment.LUCK,                      "luck", "luckofsea");
+        register(Enchantment.LUCK_OF_THE_SEA,                      "luck", "luckofsea");
         register(Enchantment.LURE,                      "lure");
         register(Enchantment.MENDING,                   "mend", "mending");
         register(Enchantment.MULTISHOT,                 "multi", "multishot");
-        register(Enchantment.OXYGEN,                    "air", "respiration", "oxygenation", "oxygen");
+        register(Enchantment.RESPIRATION,                    "air", "respiration", "oxygenation", "oxygen");
         register(Enchantment.PIERCING,                  "pierce", "piercing");
-        register(Enchantment.PROTECTION_ENVIRONMENTAL,  "prot", "protection", "protect");
-        register(Enchantment.PROTECTION_EXPLOSIONS,     "blast", "blastprot", "blastprotection");
-        register(Enchantment.PROTECTION_FALL,           "fall", "feather", "featherfall");
-        register(Enchantment.PROTECTION_FIRE,           "fireprot", "fireprotection", "fireprotect");
-        register(Enchantment.PROTECTION_PROJECTILE,     "proj", "projectile", "projprot", "projprotection");
+        register(Enchantment.PROTECTION,  "prot", "protection", "protect");
+        register(Enchantment.BLAST_PROTECTION,     "blast", "blastprot", "blastprotection");
+        register(Enchantment.FEATHER_FALLING,           "fall", "feather", "featherfall");
+        register(Enchantment.FIRE_PROTECTION,           "fireprot", "fireprotection", "fireprotect");
+        register(Enchantment.PROJECTILE_PROTECTION,     "proj", "projectile", "projprot", "projprotection");
         register(Enchantment.QUICK_CHARGE,              "charge", "quickcharge");
         register(Enchantment.RIPTIDE,                   "rip", "riptide");
         register(Enchantment.SILK_TOUCH,                "silk", "silktouch");
@@ -58,7 +58,7 @@ public class EnchantAliasRegistry {
         register(Enchantment.SWEEPING_EDGE,             "sweep", "sweeping", "sweepingedge");
         register(Enchantment.THORNS,                    "thorn", "thorns");
         register(Enchantment.VANISHING_CURSE,           "vanish", "vanishing", "curseofvanishing");
-        register(Enchantment.WATER_WORKER,              "aqua", "water", "waterworker", "aquaaffinity");
+        register(Enchantment.AQUA_AFFINITY,              "aqua", "water", "waterworker", "aquaaffinity");
 
         // ---- validation: warn on any missing alias ----
         for (Enchantment ench : Enchantment.values()) {

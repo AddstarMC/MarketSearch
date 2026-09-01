@@ -8,7 +8,6 @@ import au.com.addstar.marketsearch.pricereduction.PriceReductionConfig;
 import au.com.addstar.marketsearch.pricereduction.PriceReductionManager;
 import au.com.addstar.marketsearch.pricereduction.PriceReductionScheduler;
 import au.com.addstar.marketsearch.SlimefunNameDB.sfDBItem;
-import au.com.addstar.monolith.util.PotionUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
@@ -20,6 +19,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
@@ -30,7 +30,6 @@ import com.ghostchu.quickshop.api.QuickShopAPI;
 import com.ghostchu.quickshop.api.shop.Shop;
 import com.ghostchu.quickshop.api.shop.ShopChunk;
 import com.ghostchu.quickshop.api.shop.ShopManager;
-import com.ghostchu.quickshop.api.shop.ShopType;
 import com.ghostchu.quickshop.common.util.RomanNumber;
 
 import java.io.File;
@@ -331,7 +330,7 @@ public class MarketSearch extends JavaPlugin {
         return searchManager;
     }
 
-    public List<ShopResult> searchMarket(Player player, ItemStack searchItem, ShopType searchType) {
+    public List<ShopResult> searchMarket(Player player, ItemStack searchItem, SearchType searchType) {
         List<ShopResult> results = new ArrayList<>();
         Map<ShopChunk, Map<Location, Shop>> map = quickShopManager.getShops(marketWorld);
 
@@ -397,8 +396,8 @@ public class MarketSearch extends JavaPlugin {
                                 wrongItemCount++;
                                 if (wrongItemCount <= maxDetailedCount && debugLevel > 1) {
                                     logger.info("No match to " + shopItem.getType().name() + " in shop at "
-                                            + shop.getLocation().getBlockX() + " " + shop.getLocation().getBlockY()
-                                            + " " + shop.getLocation().getBlockZ());
+                                            + shop.bukkitLocation().getBlockX() + " " + shop.bukkitLocation().getBlockY()
+                                            + " " + shop.bukkitLocation().getBlockZ());
                                     if (wrongItemCount == maxDetailedCount) {
                                         logger.info(" ... max wrong item count limit reached; no more "
                                                 + "items will be logged");
@@ -419,13 +418,13 @@ public class MarketSearch extends JavaPlugin {
                             shopResultTime += System.nanoTime() - startshop;
                         }
 
-                        if (searchType == ShopType.SELLING && shopResult.stock == 0) {
+                        if (searchType == SearchType.SELLING && shopResult.stock == 0) {
                             if (debugEnabled) {
                                 noStockCount++;
                                 if (noStockCount <= maxDetailedCount) {
                                     logger.info("Match found, but no stock in shop at "
-                                          + shop.getLocation().getBlockX() + " " + shop.getLocation().getBlockY() + " "
-                                          + shop.getLocation().getBlockZ() + ", shop item " + getItemDetails(shopItem));
+                                          + shop.bukkitLocation().getBlockX() + " " + shop.bukkitLocation().getBlockY() + " "
+                                          + shop.bukkitLocation().getBlockZ() + ", shop item " + getItemDetails(shopItem));
 
                                     if (noStockCount == maxDetailedCount) {
                                         logger.info(" ... max no stock count limit reached; no more items will "
@@ -435,14 +434,14 @@ public class MarketSearch extends JavaPlugin {
                             }
                             continue;
                         }
-                        if (searchType == ShopType.BUYING && shopResult.space == 0) {
+                        if (searchType == SearchType.BUYING && shopResult.space == 0) {
                             // No space
                             if (debugEnabled) {
                                 noSpaceCount++;
                                 if (noSpaceCount <= maxDetailedCount) {
                                     logger.info("Match found, but no space to buy item in shop at "
-                                          + shop.getLocation().getBlockX() + " " + shop.getLocation().getBlockY() + " "
-                                          + shop.getLocation().getBlockZ() + ", shop item " + getItemDetails(shopItem));
+                                          + shop.bukkitLocation().getBlockX() + " " + shop.bukkitLocation().getBlockY() + " "
+                                          + shop.bukkitLocation().getBlockZ() + ", shop item " + getItemDetails(shopItem));
 
                                     if (noSpaceCount == maxDetailedCount) {
                                         logger.info(" ... max no space count limit reached; no more items "
@@ -452,13 +451,13 @@ public class MarketSearch extends JavaPlugin {
                             }
                             continue;
                         }
-                        if (shop.getShopType() != searchType) {
+                        if (!searchType.matches(shop)) {
                             // Wrong shop type
                             continue;
                         }
                         if (debugEnabled) {
-                            logger.info("Match found, in shop at " + shop.getLocation().getBlockX() + " "
-                                  + shop.getLocation().getBlockY() + " " + shop.getLocation().getBlockZ()
+                            logger.info("Match found, in shop at " + shop.bukkitLocation().getBlockX() + " "
+                                  + shop.bukkitLocation().getBlockY() + " " + shop.bukkitLocation().getBlockZ()
                                   + "; storing");
                         }
                         // Is this item enchanted?
@@ -487,9 +486,11 @@ public class MarketSearch extends JavaPlugin {
                               || shopItem.getType() == Material.LINGERING_POTION
                               || shopItem.getType() == Material.TIPPED_ARROW) {
 
-                            PotionUtil potion = PotionUtil.fromItemStack(shopItem);
                             shopResult.potion = true;
-                            shopResult.potionType = potion.toString();
+                            if (shopItem.getItemMeta() instanceof PotionMeta potionMeta
+                                  && potionMeta.getBasePotionType() != null) {
+                                shopResult.potionType = potionMeta.getBasePotionType().getKey().getKey();
+                            }
                         }
                         addshopResult(results, shopResult);
                     } catch (Exception exception) {
@@ -512,7 +513,7 @@ public class MarketSearch extends JavaPlugin {
             debug("Time fetching shop results: " + shopResultTime);
         }
         // Order results here
-        if (searchType == ShopType.SELLING) {
+        if (searchType == SearchType.SELLING) {
             results.sort(ShopResultSort.ByPrice);
         } else {
             results.sort(ShopResultSort.ByPriceDescending);
@@ -760,7 +761,7 @@ public class MarketSearch extends JavaPlugin {
         result.stock = shop.getRemainingStock();
         result.space = shop.getRemainingSpace();
         result.price = shop.getPrice();
-        result.shopLocation = shop.getLocation();
+        result.shopLocation = shop.bukkitLocation();
         return result;
     }
 

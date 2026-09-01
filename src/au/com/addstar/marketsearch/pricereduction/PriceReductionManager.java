@@ -3,7 +3,6 @@ package au.com.addstar.marketsearch.pricereduction;
 import au.com.addstar.marketsearch.MarketSearch;
 import com.ghostchu.quickshop.api.shop.Shop;
 import com.ghostchu.quickshop.api.shop.ShopManager;
-import com.ghostchu.quickshop.api.shop.ShopType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -150,7 +149,7 @@ public class PriceReductionManager {
             }
             for (Shop shop : shops) {
                 try {
-                    Location loc = shop.getLocation();
+                    Location loc = shop.bukkitLocation();
                     if (loc.getWorld() != null && loc.getWorld().getName().equals(marketWorld)) {
                         out.add(shop);
                         owners.add(shop.getOwner().getUniqueId());
@@ -245,7 +244,7 @@ public class PriceReductionManager {
         Shop shop;
         while ((shop = candidateShops.poll()) != null) {
             try {
-                Location loc = shop.getLocation();
+                Location loc = shop.bukkitLocation();
                 World world = loc.getWorld();
                 if (world == null) {
                     continue;
@@ -303,11 +302,11 @@ public class PriceReductionManager {
                              boolean dryRun, String marketWorld, LocalDate today, long now, Stats stats) {
         try {
             stats.scanned++;
-            Location loc = shop.getLocation();
+            Location loc = shop.bukkitLocation();
             if (loc.getWorld() == null || !loc.getWorld().getName().equals(marketWorld)) {
                 return; // belt-and-braces: never touch non-market-world shops
             }
-            if (shop.getShopType() != ShopType.SELLING) {
+            if (!shop.isSelling()) {
                 stats.skippedType++;
                 return;
             }
