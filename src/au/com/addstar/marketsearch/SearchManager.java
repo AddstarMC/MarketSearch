@@ -121,9 +121,11 @@ public class SearchManager {
 
             // Create a BossBar with the exact text they passed in, starting at 0.0 progress:
             this.bossBar = Bukkit.createBossBar(barTitle, BarColor.BLUE, BarStyle.SEGMENTED_20);
-            this.bossBar.addPlayer(player);
+            // Set progress before adding the player: createBossBar starts at 1.0, and adding
+            // the player first makes the client briefly render a full bar.
             this.bossBar.setProgress(0.0);
             this.bossBar.setVisible(true);
+            this.bossBar.addPlayer(player);
         }
 
         /**
