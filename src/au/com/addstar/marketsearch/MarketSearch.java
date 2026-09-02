@@ -43,6 +43,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class MarketSearch extends JavaPlugin {
@@ -53,6 +54,19 @@ public class MarketSearch extends JavaPlugin {
     private FileConfiguration config;
     // Higher numbers lead to more debug messages
     private int debugLevel = 1;
+    /** QuickShop's sentinel for an unlimited shop's stock/space, rather than a real count. */
+    static final int UNLIMITED_STOCK = -1;
+
+    /** Bounds each asynchronous chunk load so one slow chunk cannot stall a whole search. */
+    private static final long CHUNK_LOAD_TIMEOUT_SECONDS = 10;
+
+    /**
+     * Marks a stock/space figure we could not determine, as opposed to a real count of zero. Shops
+     * carrying this are still shown rather than filtered out, so a shop whose chest could not be
+     * read is surfaced for investigation instead of silently vanishing from results.
+     */
+    private static final int UNKNOWN_COUNT = -2;
+
     private String marketWorld = null;
     private ShopManager quickShopManager = null;
     private PlotProvider plotProvider;
@@ -303,6 +317,10 @@ public class MarketSearch extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // Drop any chunk tickets a search was still holding, so nothing is pinned after shutdown.
+        for (World world : Bukkit.getWorlds()) {
+            world.removePluginChunkTickets(this);
+        }
         shutdownPriceReduction();
     }
 
@@ -332,7 +350,14 @@ public class MarketSearch extends JavaPlugin {
 
     public List<ShopResult> searchMarket(Player player, ItemStack searchItem, SearchType searchType) {
         List<ShopResult> results = new ArrayList<>();
+        // QuickShop 6.3 returns an empty map (not null) for an unknown world, so a mismatched
+        // world name now yields zero results silently instead of tripping the null branch below.
         Map<ShopChunk, Map<Location, Shop>> map = quickShopManager.getShops(marketWorld);
+        if (map == null || map.isEmpty()) {
+            warn("No shops found in market world '" + marketWorld + "'. QuickShop knows about these "
+                  + "worlds: " + quickShopManager.getShops().keySet()
+                  + " (total shops: " + quickShopManager.getAllShops().size() + ")");
+        }
 
         int maxDetailedCount = 50;
         int wrongItemCount = 0;
@@ -368,133 +393,163 @@ public class MarketSearch extends JavaPlugin {
                     debug("Player is not searching, skipping progress update");
                 }
 
-                for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
-                    try {
-                        boolean skipresult = false;
-                        final Shop shop = inChunk.getValue();
-                        ItemStack shopItem = shop.getItem();
-
-                        if (shopItem.getType() != itemType) {
-                            // Wrong item type - skipped
-                            skipresult = true;
-                        }
-                        else if (sfSearch != null) {
-                            // Searching for Slimefun item, check if this one matches
-                            sfDBItem sfItem = getSlimefunItemType(shopItem);
-                            if ((sfItem == null) || (sfItem.sfname != sfSearch.sfname)) {
-                                skipresult = true;
-                            }
-                        } else {
-                            // Vanilla search and item is the right type
-                            // Ensure this is not also a Slimefun item
-                            if (sfEnabled && hasSlimefunMeta(shopItem))
-                                skipresult = true;
-                        }
-
-                        if (skipresult) {
-                            if (debugEnabled) {
-                                wrongItemCount++;
-                                if (wrongItemCount <= maxDetailedCount && debugLevel > 1) {
-                                    logger.info("No match to " + shopItem.getType().name() + " in shop at "
-                                            + shop.bukkitLocation().getBlockX() + " " + shop.bukkitLocation().getBlockY()
-                                            + " " + shop.bukkitLocation().getBlockZ());
-                                    if (wrongItemCount == maxDetailedCount) {
-                                        logger.info(" ... max wrong item count limit reached; no more "
-                                                + "items will be logged");
-                                    }
-                                }
-                            }
-                            continue;
-                        }
-
-                        long startshop = System.nanoTime();
-                        ShopResult shopResult;
+                // The chunk is loaded lazily, only once a shop in it actually matches the search
+                // and so needs its stock read. Most chunks hold nothing relevant to any given
+                // search, and loading those is by far the most expensive thing a search can do.
+                // Loading per chunk rather than per shop also means a search never holds more than
+                // one chunk, and never unloads one while another shop in it still has to be read.
+                boolean loadedByUs = false;
+                try {
+                    for (Entry<Location, Shop> inChunk : chunks.getValue().entrySet()) {
                         try {
-                            shopResult = getFutureShopResult(shop);
-                        } catch (InterruptedException | ExecutionException e) {
-                            MarketSearch.logger.info(e.getMessage());
-                            continue;
-                        } finally {
-                            shopResultTime += System.nanoTime() - startshop;
-                        }
+                            boolean skipresult = false;
+                            final Shop shop = inChunk.getValue();
+                            ItemStack shopItem = shop.getItem();
 
-                        if (searchType == SearchType.SELLING && shopResult.stock == 0) {
-                            if (debugEnabled) {
-                                noStockCount++;
-                                if (noStockCount <= maxDetailedCount) {
-                                    logger.info("Match found, but no stock in shop at "
-                                          + shop.bukkitLocation().getBlockX() + " " + shop.bukkitLocation().getBlockY() + " "
-                                          + shop.bukkitLocation().getBlockZ() + ", shop item " + getItemDetails(shopItem));
-
-                                    if (noStockCount == maxDetailedCount) {
-                                        logger.info(" ... max no stock count limit reached; no more items will "
-                                              + "be logged");
-                                    }
-                                }
+                            if (shopItem.getType() != itemType) {
+                                // Wrong item type - skipped
+                                skipresult = true;
                             }
-                            continue;
-                        }
-                        if (searchType == SearchType.BUYING && shopResult.space == 0) {
-                            // No space
-                            if (debugEnabled) {
-                                noSpaceCount++;
-                                if (noSpaceCount <= maxDetailedCount) {
-                                    logger.info("Match found, but no space to buy item in shop at "
-                                          + shop.bukkitLocation().getBlockX() + " " + shop.bukkitLocation().getBlockY() + " "
-                                          + shop.bukkitLocation().getBlockZ() + ", shop item " + getItemDetails(shopItem));
-
-                                    if (noSpaceCount == maxDetailedCount) {
-                                        logger.info(" ... max no space count limit reached; no more items "
-                                              + "will be logged");
-                                    }
+                            else if (sfSearch != null) {
+                                // Searching for Slimefun item, check if this one matches
+                                sfDBItem sfItem = getSlimefunItemType(shopItem);
+                                if ((sfItem == null) || (sfItem.sfname != sfSearch.sfname)) {
+                                    skipresult = true;
                                 }
-                            }
-                            continue;
-                        }
-                        if (!searchType.matches(shop)) {
-                            // Wrong shop type
-                            continue;
-                        }
-                        if (debugEnabled) {
-                            logger.info("Match found, in shop at " + shop.bukkitLocation().getBlockX() + " "
-                                  + shop.bukkitLocation().getBlockY() + " " + shop.bukkitLocation().getBlockZ()
-                                  + "; storing");
-                        }
-                        // Is this item enchanted?
-                        if (!shopItem.getEnchantments().isEmpty()) {
-                            shopResult.enchants = shopItem.getEnchantments();
-                            shopResult.enchanted = true;
-                        }
-
-                        // Is this an enchanted book?
-                        if (shopItem.getType() == Material.ENCHANTED_BOOK) {
-                            EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta) shopItem.getItemMeta();
-                            if (bookMeta != null && bookMeta.hasStoredEnchants()) {
-                                // Store the enchantment(s)
-                                shopResult.enchanted = true;
-                                shopResult.enchants = bookMeta.getStoredEnchants();
                             } else {
+                                // Vanilla search and item is the right type
+                                // Ensure this is not also a Slimefun item
+                                if (sfEnabled && hasSlimefunMeta(shopItem))
+                                    skipresult = true;
+                            }
+
+                            if (skipresult) {
                                 if (debugEnabled) {
-                                    logger.info("No stored enchants on book");
+                                    wrongItemCount++;
+                                    if (wrongItemCount <= maxDetailedCount && debugLevel > 1) {
+                                        logger.info("No match to " + shopItem.getType().name() + " in shop at "
+                                                + shop.bukkitLocation().getBlockX() + " " + shop.bukkitLocation().getBlockY()
+                                                + " " + shop.bukkitLocation().getBlockZ());
+                                        if (wrongItemCount == maxDetailedCount) {
+                                            logger.info(" ... max wrong item count limit reached; no more "
+                                                    + "items will be logged");
+                                        }
+                                    }
+                                }
+                                continue;
+                            }
+
+                            // This shop matched, so its stock is needed: make sure the chunk is
+                            // resident. Done at most once per chunk, on first match.
+                            if (!loadedByUs) {
+                                loadedByUs = holdChunk(chunks.getKey());
+                            }
+
+                            long startshop = System.nanoTime();
+                            ShopResult shopResult;
+                            try {
+                                shopResult = getFutureShopResult(shop);
+                            } catch (InterruptedException | ExecutionException e) {
+                                // Log the cause with a stack trace: ExecutionException itself carries a
+                                // null message, which previously turned every per-shop failure into a
+                                // blank log line and a silently empty search result.
+                                Throwable cause = e.getCause() != null ? e.getCause() : e;
+                                logger.log(java.util.logging.Level.WARNING,
+                                      "Failed to read shop at " + shop.bukkitLocation(), cause);
+                                if (e instanceof InterruptedException) {
+                                    Thread.currentThread().interrupt();
+                                }
+                                continue;
+                            } finally {
+                                shopResultTime += System.nanoTime() - startshop;
+                            }
+
+                            if (searchType == SearchType.SELLING && shopResult.stock == 0) {
+                                // stock < 0 means unlimited or unknown, so it is not filtered here.
+                                if (debugEnabled) {
+                                    noStockCount++;
+                                    if (noStockCount <= maxDetailedCount) {
+                                        logger.info("Match found, but no stock in shop at "
+                                              + shop.bukkitLocation().getBlockX() + " " + shop.bukkitLocation().getBlockY() + " "
+                                              + shop.bukkitLocation().getBlockZ() + ", shop item " + getItemDetails(shopItem));
+
+                                        if (noStockCount == maxDetailedCount) {
+                                            logger.info(" ... max no stock count limit reached; no more items will "
+                                                  + "be logged");
+                                        }
+                                    }
+                                }
+                                continue;
+                            }
+                            if (searchType == SearchType.BUYING && shopResult.space == 0) {
+                                // space < 0 means unlimited or unknown, so it is not filtered here.
+                                if (debugEnabled) {
+                                    noSpaceCount++;
+                                    if (noSpaceCount <= maxDetailedCount) {
+                                        logger.info("Match found, but no space to buy item in shop at "
+                                              + shop.bukkitLocation().getBlockX() + " " + shop.bukkitLocation().getBlockY() + " "
+                                              + shop.bukkitLocation().getBlockZ() + ", shop item " + getItemDetails(shopItem));
+
+                                        if (noSpaceCount == maxDetailedCount) {
+                                            logger.info(" ... max no space count limit reached; no more items "
+                                                  + "will be logged");
+                                        }
+                                    }
+                                }
+                                continue;
+                            }
+                            if (!searchType.matches(shop)) {
+                                // Wrong shop type
+                                continue;
+                            }
+                            if (debugEnabled) {
+                                logger.info("Match found, in shop at " + shop.bukkitLocation().getBlockX() + " "
+                                      + shop.bukkitLocation().getBlockY() + " " + shop.bukkitLocation().getBlockZ()
+                                      + "; storing");
+                            }
+                            // Is this item enchanted?
+                            if (!shopItem.getEnchantments().isEmpty()) {
+                                shopResult.enchants = shopItem.getEnchantments();
+                                shopResult.enchanted = true;
+                            }
+
+                            // Is this an enchanted book?
+                            if (shopItem.getType() == Material.ENCHANTED_BOOK) {
+                                EnchantmentStorageMeta bookMeta = (EnchantmentStorageMeta) shopItem.getItemMeta();
+                                if (bookMeta != null && bookMeta.hasStoredEnchants()) {
+                                    // Store the enchantment(s)
+                                    shopResult.enchanted = true;
+                                    shopResult.enchants = bookMeta.getStoredEnchants();
+                                } else {
+                                    if (debugEnabled) {
+                                        logger.info("No stored enchants on book");
+                                    }
                                 }
                             }
-                        }
 
-                        // Is this a potion?
-                        if (shopItem.getType() == Material.POTION
-                              || shopItem.getType() == Material.SPLASH_POTION
-                              || shopItem.getType() == Material.LINGERING_POTION
-                              || shopItem.getType() == Material.TIPPED_ARROW) {
+                            // Is this a potion?
+                            if (shopItem.getType() == Material.POTION
+                                  || shopItem.getType() == Material.SPLASH_POTION
+                                  || shopItem.getType() == Material.LINGERING_POTION
+                                  || shopItem.getType() == Material.TIPPED_ARROW) {
 
-                            shopResult.potion = true;
-                            if (shopItem.getItemMeta() instanceof PotionMeta potionMeta
-                                  && potionMeta.getBasePotionType() != null) {
-                                shopResult.potionType = potionMeta.getBasePotionType().getKey().getKey();
+                                shopResult.potion = true;
+                                if (shopItem.getItemMeta() instanceof PotionMeta potionMeta
+                                      && potionMeta.getBasePotionType() != null) {
+                                    shopResult.potionType = potionMeta.getBasePotionType().getKey().getKey();
+                                }
                             }
+                            addshopResult(results, shopResult);
+                        } catch (Exception exception) {
+                            // Log with a stack trace; getMessage() alone is null for many exceptions
+                            // and silently hid per-shop failures from the search results.
+                            logger.log(java.util.logging.Level.WARNING,
+                                  "Error while searching a shop", exception);
                         }
-                        addshopResult(results, shopResult);
-                    } catch (Exception exception) {
-                        MarketSearch.logger.info(exception.getMessage());
+                    }
+                } finally {
+                    if (loadedByUs) {
+                        releaseChunk(chunks.getKey());
                     }
                 }
             }
@@ -741,9 +796,11 @@ public class MarketSearch extends JavaPlugin {
     }
 
     private ShopResult getFutureShopResult(Shop shop) throws ExecutionException, InterruptedException {
+        // The caller has already loaded this shop's chunk, so only the chest read itself is left,
+        // and QuickShop requires that on the main thread.
         FutureTask<ShopResult> task = new FutureTask<>(() -> {
             try {
-                return storeResult(shop);
+                return storeResult(shop, getShopCounts(shop));
             } catch (Exception e) {
                 throw new ExecutionException(e);
             }
@@ -752,18 +809,144 @@ public class MarketSearch extends JavaPlugin {
         return task.get();
     }
 
-    private ShopResult storeResult(Shop shop) {
+    /**
+     * Makes a shop chunk resident and holds it there, without blocking the main thread. Must be
+     * called from an async task: it waits on Paper's asynchronous chunk load.
+     *
+     * <p>A plugin chunk ticket is taken before loading. Without one, nothing references a chunk
+     * loaded this way and the server is free to unload it again immediately - including in the gap
+     * between the load completing on the main thread and this search's read task running there,
+     * which made stock reads fail intermittently for shops nobody was standing near.
+     *
+     * @param shopChunk the chunk to load and hold.
+     * @return true if a ticket was taken and must be released once the chunk's shops are read.
+     */
+    private boolean holdChunk(ShopChunk shopChunk) {
+        World world = Bukkit.getWorld(shopChunk.getWorld());
+        if (world == null) {
+            return false;
+        }
+        int x = shopChunk.getX();
+        int z = shopChunk.getZ();
+        try {
+            // The ticket both loads the chunk and keeps it loaded until released.
+            world.addPluginChunkTicket(x, z, this);
+            if (!world.isChunkLoaded(x, z)) {
+                // false = do not generate: a shop always sits in already-generated terrain, and
+                // this stops a search ever creating new chunks.
+                world.getChunkAtAsync(x, z, false).get(CHUNK_LOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            }
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            world.removePluginChunkTicket(x, z, this);
+            return false;
+        } catch (Exception e) {
+            debug("Could not load chunk " + x + "," + z + ": " + e);
+            world.removePluginChunkTicket(x, z, this);
+            return false;
+        }
+    }
+
+    /**
+     * Releases the ticket held on a chunk, once every shop in it has been read. The server is then
+     * free to unload the chunk when it chooses, as it would any other.
+     *
+     * @param shopChunk the chunk to release.
+     */
+    private void releaseChunk(ShopChunk shopChunk) {
+        World world = Bukkit.getWorld(shopChunk.getWorld());
+        if (world == null) {
+            return;
+        }
+        try {
+            world.removePluginChunkTicket(shopChunk.getX(), shopChunk.getZ(), this);
+        } catch (Throwable t) {
+            debug("Failed to release chunk " + shopChunk.getX() + "," + shopChunk.getZ() + ": " + t);
+        }
+    }
+
+    private ShopResult storeResult(Shop shop, int[] counts) {
         ShopResult result = new ShopResult();
         ItemStack foundItem = shop.getItem();
         result.shopOwner = shop.getOwner().getDisplay();
         result.type = foundItem.getType().name();
         result.itemName = initialCaps(foundItem.getType().name());
-        result.stock = shop.getRemainingStock();
-        result.space = shop.getRemainingSpace();
+        result.stock = counts[0];
+        result.space = counts[1];
         result.price = shop.getPrice();
         result.shopLocation = shop.bukkitLocation();
         return result;
     }
+
+    /**
+     * Returns {stock, space} for a shop, preferring QuickShop's database-backed inventory cache so
+     * that shops in unloaded chunks report real numbers. Falls back to the live inventory read when
+     * the cache has no entry for the shop yet, which is correct for loaded chunks.
+     *
+     * @param shop the shop to read.
+     * @return a two-element array of remaining stock and remaining space.
+     */
+    /**
+     * Returns {stock, space} for a shop, loading the shop's chunk if necessary so the chest is
+     * readable. Must run on the main thread.
+     *
+     * <p>QuickShop 6.3 resolves a shop's container inventory through {@code World.isChunkLoaded()}
+     * and silently reports 0 when the chunk is unloaded, so the chest has to be loaded to get a
+     * true figure. Its database record is not a usable substitute: QuickShop fires
+     * {@code ShopInventoryCalculateEvent} from two places, each supplying -1 for the figure it did
+     * not compute, and the listener writes both columns unconditionally - so a space calculation
+     * overwrites the stored stock with -1. Stock levels have to be accurate here, so read the chest.
+     *
+     * @param shop the shop to read.
+     * @param loadedByUs collects chunks this call loaded, so they can be unloaded afterwards.
+     * @return a two-element array of remaining stock and remaining space.
+     */
+    private int[] getShopCounts(Shop shop) {
+        // An unlimited shop never runs out; QuickShop reports -1 for it rather than a count.
+        if (shop.isUnlimited()) {
+            return new int[] {UNLIMITED_STOCK, UNLIMITED_STOCK};
+        }
+        Location loc = shop.bukkitLocation();
+        World world = loc.getWorld();
+        if (world == null || !world.isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)) {
+            // Never read a shop whose chunk is not loaded. QuickShop's getInventory() deletes a
+            // shop it considers corrupt, and only its own "chunk not loaded" early return stands
+            // between an unreadable chest and that deletion. Report the count as unknown instead.
+            debug("Skipping stock read for shop at " + loc + ": chunk is not loaded");
+            return new int[] {UNKNOWN_COUNT, UNKNOWN_COUNT};
+        }
+        // Check the shop's block ourselves before letting QuickShop resolve it. QuickShop's
+        // getInventory() resolves the chest with Block.getState(false) - the live tile entity - and
+        // treats "not an InventoryHolder" as a corrupt shop, deleting it. Immediately after a chunk
+        // loads, a chest's tile entity may not be attached yet, which is indistinguishable from a
+        // genuinely missing container. Testing it here first means a shop in that state is reported
+        // as unknown rather than handed to QuickShop while it looks broken.
+        org.bukkit.block.Block shopBlock = shop.getShopBlock();
+        if (!(shopBlock.getState(false) instanceof org.bukkit.inventory.InventoryHolder)) {
+            // No container at the shop's location. This is the state QuickShop's getInventory()
+            // treats as a corrupt shop and deletes, so report it rather than reading further.
+            debug("Shop at " + loc + " (owner " + shop.getOwner().getDisplay() + ") has no"
+                  + " container: the block there is " + shopBlock.getType());
+            return new int[] {UNKNOWN_COUNT, UNKNOWN_COUNT};
+        }
+        try {
+            // QuickShop tracks its own loaded/unloaded state separately from the chunk, and only
+            // populates a shop's inventory once it considers the shop loaded.
+            if (!shop.isLoaded() && quickShopManager != null) {
+                quickShopManager.loadShop(shop);
+            }
+            // Reads the chest directly. QuickShop's database record is not a usable substitute: it
+            // fires ShopInventoryCalculateEvent from two places, each supplying -1 for the figure
+            // it did not compute, and the listener writes both columns unconditionally - so a
+            // space calculation overwrites the stored stock with -1.
+            return new int[] {shop.getRemainingStock(), shop.getRemainingSpace()};
+        } catch (Throwable t) {
+            debug("Could not read stock for shop at " + shop.bukkitLocation() + ": " + t);
+            return new int[] {UNKNOWN_COUNT, UNKNOWN_COUNT};
+        }
+    }
+
 
     public static class ShopResultSort {
         static final Comparator<ShopResult> ByPrice = (shop1, shop2) -> {

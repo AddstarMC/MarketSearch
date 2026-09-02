@@ -525,11 +525,9 @@ class CommandListener implements CommandExecutor {
 
                 String stockdisplay;
                 if (action.equals("SELL")) {
-                    stockdisplay = ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + result.space + " slots"
-                          + ChatColor.DARK_GREEN + ")";
+                    stockdisplay = formatCount(result.space, "slots");
                 } else {
-                    stockdisplay = ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + result.stock + " left"
-                          + ChatColor.DARK_GREEN + ")";
+                    stockdisplay = formatCount(result.stock, "left");
                 }
 
                 ComponentBuilder row = new ComponentBuilder(" - ").color(ChatColor.GREEN);
@@ -566,6 +564,27 @@ class CommandListener implements CommandExecutor {
                 sender.sendMessage(ChatColor.RED + "Sorry, no stock available in any shop for " + initialCapsName);
             }
         }
+    }
+
+    /**
+     * Renders a stock or space figure for display. Negative values are sentinels rather than real
+     * counts: an unlimited shop has no finite figure, and a shop whose chest could not be read
+     * has no known one. Both are shown as text instead of a misleading number.
+     *
+     * @param count the figure to render.
+     * @param label the suffix to use for a real count, e.g. "left" or "slots".
+     * @return the formatted, coloured display string.
+     */
+    private String formatCount(int count, String label) {
+        String body;
+        if (count == MarketSearch.UNLIMITED_STOCK) {
+            body = "unlimited";
+        } else if (count < 0) {
+            body = "stock unknown";
+        } else {
+            body = count + " " + label;
+        }
+        return ChatColor.DARK_GREEN + "(" + ChatColor.GREEN + body + ChatColor.DARK_GREEN + ")";
     }
 
     private ItemStack getItem(CommandSender sender, String search) {
